@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher · BlockQuest Academy</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/">Block<span>Quest</span></a><span class="muted">Teacher</span><span class="spacer"></span>
+  <span id="tname" class="chip hidden"></span><button id="logout" class="btn ghost small hidden">Sign out</button>
+</div>
+
+<!-- sign in / register -->
+<div id="auth" class="wrap hidden">
+  <div class="card" style="max-width:440px;margin:40px auto">
+    <div class="tabs"><button class="tab active" data-mode="login">Sign in</button><button class="tab" data-mode="register">Register</button></div>
+    <form id="authForm">
+      <div class="field hidden" id="nameField"><label for="aname">Your name</label><input id="aname" autocomplete="name"></div>
+      <div class="field"><label for="aemail">Email</label><input id="aemail" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="apass">Password</label><input id="apass" type="password" autocomplete="current-password" required minlength="8"></div>
+      <div class="error" id="aerr"></div>
+      <button class="btn" id="ago">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<!-- dashboard -->
+<div id="dash" class="wrap hidden">
+  <div class="dash">
+    <div class="card">
+      <h3>My question banks</h3>
+      <div id="banks"></div>
+      <form id="newBank" style="margin-top:14px">
+        <div class="field"><label for="btitle">New bank title</label><input id="btitle" placeholder="e.g. Networks – Unit 3" required maxlength="120"></div>
+        <div class="field"><label for="bgrade">Grade</label><select id="bgrade"><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option value="">Other</option></select></div>
+        <button class="btn small">+ Create bank</button>
+      </form>
+    </div>
+    <div class="card" id="detail"><p class="muted">Create a question bank on the left, or pick one to open it.</p></div>
+  </div>
+</div>
+<script src="/levels.js"></script>
+<script src="/teacher.js"></script>
+<footer class="credit">Created by <b>Kassem Freiji</b></footer>
+</body>
+</html>

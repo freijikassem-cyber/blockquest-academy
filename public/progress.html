@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress · BlockQuest Academy</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/">Block<span>Quest</span></a><span class="muted" data-i18n="pTitle"></span><span class="spacer"></span>
+  <button class="btn ghost small" data-lang-btn></button>
+  <a class="btn ghost small" href="/play" data-i18n="pBack"></a>
+</div>
+<div class="prog">
+  <!-- ask for the code -->
+  <div id="ask" class="card hidden" style="max-width:460px;margin:40px auto">
+    <h2 data-i18n="pEnter"></h2>
+    <div class="field"><input id="key" maxlength="10" autocomplete="off" class="mono" style="text-transform:uppercase;letter-spacing:3px;font-weight:800;direction:ltr"></div>
+    <div class="error" id="err"></div>
+    <button id="open" class="btn" data-i18n="pOpen"></button>
+  </div>
+  <div id="report" class="hidden"></div>
+</div>
+<script src="/levels.js"></script>
+<script src="/lessons.js"></script>
+<script src="/i18n.js"></script>
+<script src="/progress.js"></script>
+<footer class="credit">Created by <b>Kassem Freiji</b></footer>
+</body>
+</html>

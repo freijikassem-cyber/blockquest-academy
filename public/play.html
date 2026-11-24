@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play · BlockQuest Academy</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="/">Block<span>Quest</span></a>
+  <span id="crumb" class="muted"></span>
+  <span class="spacer"></span>
+  <button class="btn ghost small" data-lang-btn></button>
+  <span id="gems" class="chip hidden">💎 0</span>
+  <span id="who" class="chip hidden"></span>
+  <button id="progBtn" class="btn ghost small hidden" data-i18n="myProgress"></button>
+  <button id="mapBtn" class="btn ghost small hidden" data-i18n="levelsBtn"></button>
+  <button id="leaveBtn" class="btn ghost small hidden" data-i18n="leave"></button>
+</div>
+
+<!-- join -->
+<div id="join" class="wrap hidden">
+  <div class="hero" style="padding-bottom:8px">
+    <h1 data-i18n="joinTitle"></h1>
+    <p data-i18n="joinSub"></p>
+  </div>
+  <div class="card" style="max-width:720px;margin:0 auto">
+    <div class="row">
+      <div class="field" style="flex:1;min-width:180px"><label for="jcode" data-i18n="classCode"></label><input id="jcode" maxlength="6" autocomplete="off" style="text-transform:uppercase;letter-spacing:4px;font-weight:800"></div>
+      <div class="field" style="flex:2;min-width:200px"><label for="jname" data-i18n="yourName"></label><input id="jname" maxlength="40" autocomplete="off"></div>
+    </div>
+    <label data-i18n="chooseTrack"></label>
+    <div class="choices" style="margin-bottom:16px">
+      <div class="card choice selected" data-track="blocks" tabindex="0"><div class="tag" data-i18n="tBlocksTag"></div><h2 style="margin-top:8px" data-i18n="tBlocksName"></h2><p class="muted" style="margin:0" data-i18n="tBlocksText"></p></div>
+      <div class="card choice" data-track="python" tabindex="0"><div class="tag" data-i18n="tPyTag"></div><h2 style="margin-top:8px" data-i18n="tPyName"></h2><p class="muted" style="margin:0" data-i18n="tPyText"></p></div>
+    </div>
+    <div class="error" id="jerr"></div>
+    <button id="jgo" class="btn" data-i18n="start"></button>
+  </div>
+</div>
+
+<!-- level map -->
+<div id="map" class="wrap hidden">
+  <div class="row" style="margin:10px 0 18px">
+    <div><h1 id="mapTitle" style="margin:0"></h1><div id="mapSub" class="muted"></div></div>
+    <span class="spacer"></span>
+    <button id="switchBtn" class="btn ghost small"></button>
+  </div>
+  <div class="mapbar"><b id="mapDone"></b><div class="pbar"><b id="mapBar"></b></div></div>
+  <div id="levels" class="levels"></div>
+</div>
+
+<!-- game -->
+<div id="game" class="game hidden">
+  <div class="stage">
+    <canvas id="canvas" width="480" height="480"></canvas>
+    <div class="inv" id="inv"></div>
+    <div class="row">
+      <button id="run" class="btn teal" data-i18n="run"></button>
+      <button id="reset" class="btn ghost" data-i18n="reset"></button>
+      <button id="hint" class="btn ghost small" data-i18n="hint"></button>
+      <button id="watch" class="btn ghost small" data-i18n="watch"></button>
+      <label class="muted" style="margin:0;font-weight:700"><input type="checkbox" id="fast" style="width:auto"> <span data-i18n="fast"></span></label>
+    </div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+  <div class="work">
+    <div class="work-head"><span id="workTitle"></span><span class="spacer"></span><span id="counter" class="chip"></span><button id="clear" class="btn ghost small" data-i18n="startOver"></button></div>
+    <div id="blockly" class="hidden"></div>
+    <div id="python" class="hidden" style="display:flex;flex-direction:column;flex:1">
+      <div class="py">
+        <div class="editor"><div class="gutter" id="gutter">1</div><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></div>
+        <div class="ref">
+          <h3 data-i18n="refTitle"></h3>
+          <code>hero.move()</code><span data-i18n="ref1"></span>
+          <code>hero.turn_left()</code><code>hero.turn_right()</code><span data-i18n="ref2"></span>
+          <code>hero.mine()</code><span data-i18n="ref3"></span>
+          <code>hero.place("plank")</code><span data-i18n="ref4"></span>
+          <code>hero.ahead()</code><span data-i18n="ref5"></span>
+          <code>hero.path_clear()</code><span data-i18n="ref6"></span>
+          <code>hero.at_goal()</code><span data-i18n="ref7"></span>
+          <code>hero.count("gem")</code><span data-i18n="ref8"></span>
+        </div>
+      </div>
+      <div id="out"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="card" id="modalCard"></div></div>
+
+<script src="/vendor/blockly/blockly_compressed.js"></script>
+<script src="/vendor/blockly/blocks_compressed.js"></script>
+<script src="/vendor/blockly/javascript_compressed.js"></script>
+<script src="/vendor/blockly/msg/en.js"></script>
+<script src="/vendor/skulpt/skulpt.min.js"></script>
+<script src="/vendor/skulpt/skulpt-stdlib.js"></script>
+<script src="/levels.js"></script>
+<script src="/lessons.js"></script>
+<script src="/i18n.js"></script>
+<script src="/engine.js"></script>
+<script src="/intro.js"></script>
+<script src="/game.js"></script>
+<footer class="credit">Created by <b>Kassem Freiji</b></footer>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BlockQuest Academy</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar"><a class="brand" href="/">Block<span>Quest</span></a><span class="spacer"></span><a class="btn ghost small" href="/teacher">Teacher sign in</a></div>
+<div class="wrap">
+  <div class="hero">
+    <h1>BlockQuest Academy</h1>
+    <p>Code a little robot through a blocky world — and answer your teacher's questions to win gems.</p>
+    <canvas id="demo" width="480" height="480" style="width:min(320px,80vw);aspect-ratio:1;border:4px solid #000;border-radius:12px;image-rendering:pixelated"></canvas>
+  </div>
+  <div class="choices">
+    <a class="card choice" href="/play" style="text-decoration:none;color:inherit"><div class="tag">STUDENTS</div><h2 style="margin-top:8px">Play</h2><p class="muted">Enter your class code and start a mission. Blocks for beginners, real Python up to Grade 9. Explanations in English or Arabic.</p><span class="btn">I have a class code</span></a>
+    <a class="card choice" href="/teacher" style="text-decoration:none;color:inherit"><div class="tag">TEACHERS</div><h2 style="margin-top:8px">Teach</h2><p class="muted">Build question banks, share a class code, and watch the grade report fill in as students play.</p><span class="btn teal">Open my dashboard</span></a>
+    <a class="card choice" href="/progress" style="text-decoration:none;color:inherit"><div class="tag">PARENTS</div><h2 style="margin-top:8px">Follow</h2><p class="muted">Type your child's progress code to see the levels they finished, their stars and quiz score.</p><span class="btn pink">See progress</span></a>
+  </div>
+</div>
+<script src="/levels.js"></script>
+<script src="/engine.js"></script>
+<script>
+  // looping demo of the first loop level
+  const r = new BQ.Renderer(document.getElementById("demo"));
+  const level = LEVELS.blocks.find((l) => l.id === "b5");
+  (async function loop() {
+    for (;;) {
+      r.load(level);
+      const w = new BQ.World(level);
+      for (let i = 0; i < 4; i++) { w.act("forward"); w.act("left"); w.act("forward"); w.act("right"); }
+      await new Promise((s) => setTimeout(s, 700));
+      await r.play(w.events);
+      await r.celebrate();
+      await new Promise((s) => setTimeout(s, 900));
+    }
+  })();
+</script>
+<footer class="credit">Created by <b>Kassem Freiji</b></footer>
+</body>
+</html>

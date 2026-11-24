@@ -1,0 +1,29 @@
+{
+  "name": "blockquest-academy",
+  "version": "1.0.0",
+  "description": "BlockQuest Academy - coding game for students (blocks and Python) by Kassem Freiji",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/smoke-test.mjs"
+  },
+  "keywords": [],
+  "author": "Kassem Freiji",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "blockly": "^13.4.0",
+    "express": "^5.3.0",
+    "jszip": "^3.10.2",
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^3.11.174",
+    "pg": "^8.23.1",
+    "skulpt": "^1.2.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
