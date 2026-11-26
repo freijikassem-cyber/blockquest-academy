@@ -364,6 +364,12 @@ app.get("/api/progress", async (req, res) => {
   res.json({ name: rows[0].name, bankTitle: bank.title, grade: bank.grade, teacher: teacher?.name || "", lastSeen: last, answered, correct, tracks });
 });
 
+// ---------- health check (also keeps the free database from pausing: a scheduled job calls it) ----------
+app.get("/api/health", async (req, res) => {
+  await get("SELECT 1 AS ok");
+  res.json({ ok: true, db: db.kind });
+});
+
 // ---------- static ----------
 const vendor = (route, dir) => app.use(route, express.static(path.join(here, "node_modules", dir), { maxAge: "7d" }));
 vendor("/vendor/blockly", "blockly");
