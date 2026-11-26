@@ -14,7 +14,7 @@ const get = db.get, all = db.all, run = db.run;
 const PKEY_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 // picture passwords for young students (the same list is in public/game.js)
 const PICS = ["dog", "cat", "lion", "frog", "monkey", "panda", "fox", "turtle", "octopus", "unicorn", "bee", "dolphin"];
-const LEVEL_ID = /^[bpa]\d{1,3}$/;
+const LEVEL_ID = /^[bpaq]\d{1,3}$/;
 function parseList(v) { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a.filter((x) => LEVEL_ID.test(x)) : []; } catch { return []; } }
 function newPkey() {
   let c = "";
@@ -259,8 +259,9 @@ app.get("/api/banks/:id/report", auth, async (req, res) => {
   const bank = await ownBank(req, res); if (!bank) return;
   for (const st of await all("SELECT * FROM students WHERE bank_id=? AND pkey IS NULL", bank.id)) await pkeyFor(st);
   const students = await all(`SELECT s.id, s.name, s.track, s.gems, s.last_seen, s.pkey, s.pic,
-      (SELECT COUNT(*) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%') AS levels_done,
-      (SELECT COALESCE(SUM(stars),0) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%') AS stars,
+      (SELECT COUNT(*) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%' AND level_id NOT LIKE 'q%') AS levels_done,
+      (SELECT COALESCE(SUM(stars),0) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%' AND level_id NOT LIKE 'q%') AS stars,
+      (SELECT COUNT(*) FROM progress WHERE student_id=s.id AND level_id LIKE 'q%') AS quizzes_passed,
       (SELECT COUNT(*) FROM answers WHERE student_id=s.id) AS answered,
       (SELECT COALESCE(SUM(correct),0) FROM answers WHERE student_id=s.id) AS correct
     FROM students s WHERE s.bank_id=? ORDER BY lower(s.name), s.track`, bank.id);
@@ -464,6 +465,8 @@ vendor("/vendor/pdfjs", "pdfjs-dist/build");
 vendor("/vendor/mammoth", "mammoth");
 vendor("/vendor/xlsx", "xlsx/dist");
 vendor("/vendor/jszip", "jszip/dist");
+// each grade band has its own course page; they all run the play page
+app.get(["/grades-1-3", "/grades-4-6", "/grades-7-9"], (req, res) => res.sendFile(path.join(here, "public", "play.html")));
 app.use(express.static(path.join(here, "public"), { extensions: ["html"] }));
 
 // database or other unexpected errors: log them and answer with JSON instead of an HTML page

@@ -238,10 +238,11 @@
   async function paneReport() {
     const r = await api("GET", `/api/banks/${bank.id}/report`);
     const total = (t) => window.LEVELS[t].length;
+    const quizTotal = (t) => window.COURSES.filter((c) => c.track === t).reduce((n, c) => n + c.units.length, 0);
     const trackName = (t) => (t === "python" ? "Python" : "Blocks");
     $("pane").innerHTML = `<div class="row" style="margin-bottom:12px"><span class="chip">${r.students.length} student entries</span><span class="spacer"></span><button id="refresh" class="btn ghost small">Refresh</button><button id="export" class="btn small">Export CSV</button></div>
-      <div class="tablewrap"><table><thead><tr><th>Student</th><th title="Secret picture">🔑</th><th>Track</th><th>Levels</th><th>Stars</th><th>Gems</th><th>Last active</th><th>Parent code</th><th></th></tr></thead><tbody>
-      ${r.students.map((s) => `<tr><td><a href="#" data-st="${s.id}"><b>${esc(s.name)}</b></a></td><td style="font-size:20px">${PICS[s.pic] || "–"}</td><td>${trackName(s.track)}</td><td><div class="row" style="flex-wrap:nowrap;gap:8px"><b>${s.levels_done} / ${total(s.track)}</b><div class="bar"><b style="width:${pct(s.levels_done, total(s.track))}%"></b></div></div></td><td>${s.stars} / ${total(s.track) * 3}</td><td>💎 ${s.gems}</td><td class="muted">${esc(s.last_seen)}</td><td><a href="/progress#${esc(s.pkey || "")}" target="_blank" style="font-family:ui-monospace,monospace">${esc(s.pkey || "")}</a></td><td><button class="btn ghost small" data-rm="${s.id}" title="Remove this student's results">✕</button></td></tr>`).join("") || '<tr><td colspan="9" class="muted">No students have joined yet. Share the class code from the Share tab.</td></tr>'}
+      <div class="tablewrap"><table><thead><tr><th>Student</th><th title="Secret picture">🔑</th><th>Track</th><th>Levels</th><th>Quizzes</th><th>Stars</th><th>Gems</th><th>Last active</th><th>Parent code</th><th></th></tr></thead><tbody>
+      ${r.students.map((s) => `<tr><td><a href="#" data-st="${s.id}"><b>${esc(s.name)}</b></a></td><td style="font-size:20px">${PICS[s.pic] || "–"}</td><td>${trackName(s.track)}</td><td><div class="row" style="flex-wrap:nowrap;gap:8px"><b>${s.levels_done} / ${total(s.track)}</b><div class="bar"><b style="width:${pct(s.levels_done, total(s.track))}%"></b></div></div></td><td>${s.quizzes_passed} / ${quizTotal(s.track)}</td><td>${s.stars} / ${total(s.track) * 3}</td><td>💎 ${s.gems}</td><td class="muted">${esc(s.last_seen)}</td><td><a href="/progress#${esc(s.pkey || "")}" target="_blank" style="font-family:ui-monospace,monospace">${esc(s.pkey || "")}</a></td><td><button class="btn ghost small" data-rm="${s.id}" title="Remove this student's results">✕</button></td></tr>`).join("") || '<tr><td colspan="10" class="muted">No students have joined yet. Share the class code from the Share tab.</td></tr>'}
       </tbody></table></div>
       <p class="muted" style="margin-top:8px">Click a student's name to see each level, their latest code and their projects.</p>
 `;
@@ -249,19 +250,25 @@
     $("pane").querySelectorAll("[data-st]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); studentModal(Number(a.dataset.st)); }));
     $("export").addEventListener("click", () => {
       const cell = (v) => `"${String(v).replace(/"/g, '""')}"`;
-      const rows = [["Student", "Track", "Levels completed", "Levels total", "Stars", "Gems", "Last active (UTC)", "Parent progress code"]]
-        .concat(r.students.map((s) => [s.name, trackName(s.track), s.levels_done, total(s.track), s.stars, s.gems, s.last_seen, s.pkey || ""]));
+      const rows = [["Student", "Track", "Levels completed", "Levels total", "Unit quizzes passed", "Stars", "Gems", "Last active (UTC)", "Parent progress code"]]
+        .concat(r.students.map((s) => [s.name, trackName(s.track), s.levels_done, total(s.track), s.quizzes_passed, s.stars, s.gems, s.last_seen, s.pkey || ""]));
       download(`${bank.title.replace(/[^\w\- ]+/g, "")} - grade report.csv`, rows.map((x) => x.map(cell).join(",")).join("\n"));
     });
     $("pane").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", async () => { if (!confirm("Remove this student's results from the report?")) return; await api("DELETE", `/api/students/${b.dataset.rm}`); paneReport(); }));
   }
 
   // ---------- one student: levels, latest code, projects ----------
+  const byId = (id) => [...window.LEVELS.blocks, ...window.LEVELS.python].find((l) => l.id === id);
+  // one group per unit (levels, unit project, unit quiz), one for each final project, and the AI Lab
   const allLevelLists = () => [
-    ...window.STAGES.map((st) => ({ title: `Stage ${st.n} · Grades ${st.grades} (${st.track === "blocks" ? "Blocks" : "Python"})`, list: window.LEVELS[st.track].filter((l) => l.stage === st.n), track: st.track })),
+    ...window.COURSES.flatMap((c) => [
+      ...c.units.map((u, ui) => ({ title: `Grades ${c.grades} · Unit ${ui + 1}: ${u.title.en}`, track: c.track,
+        list: [...u.levels.map(byId), byId(u.project), { id: u.quiz, title: "Unit quiz", quiz: true }] })),
+      { title: `Grades ${c.grades} · Final project (unlocks the signed certificate)`, track: c.track, list: [byId(c.final)] },
+    ]),
     { title: "AI Lab", list: window.AI_LEVELS.map((a) => ({ ...a, title: BQ.AI.title(a) })), track: "ai" },
   ];
-  const levelNo = (l, track) => (track === "ai" ? "AI " + (window.AI_LEVELS.findIndex((a) => a.id === l.id) + 1) : window.LEVELS[track].indexOf(l) + 1);
+  const levelNo = (l, track) => (l.quiz ? "📝" : l.kind === "project" ? "🛠" : l.kind === "final" ? "🏁" : track === "ai" ? "AI " + (window.AI_LEVELS.findIndex((a) => a.id === l.id) + 1) : "•");
   async function studentModal(id) {
     let d;
     try { d = await api("GET", `/api/students/${id}`); } catch (e) { return alert(e.message); }
@@ -287,6 +294,12 @@
   }
 
   // ---------- lessons & level locks ----------
+  function quizLesson(l, locked) {
+    const qs = window.QUIZZES[l.id] || [], txt = (o) => (typeof o === "object" ? o.en : o);
+    return `<details class="lesson"><summary><label class="no-print" style="display:inline;margin:0" onclick="event.stopPropagation()"><input type="checkbox" data-lv="${l.id}" style="width:auto" ${locked.has(l.id) ? "" : "checked"}> Open</label>
+      <b>📝 Unit quiz</b> <span class="chip">${qs.length} questions · pass ${Math.ceil(qs.length * 0.75)}</span></summary>
+      <div class="lesson-body"><p>Students take the quiz after the unit project. Passing opens the next unit; they can retry as often as they need.</p><ol>${qs.map((q) => `<li><p>${esc(q.q.en)}</p>${q.code ? `<pre class="codebox">${esc(q.code)}</pre>` : ""}<p class="muted">Answer: <b>${esc(txt(q.o[q.a]))}</b></p></li>`).join("")}</ol></div></details>`;
+  }
   function paneLessons() {
     const locked = new Set((() => { try { return JSON.parse(bank.locked || "[]"); } catch { return []; } })());
     const save = async () => { bank = await api("PUT", `/api/banks/${bank.id}`, { locked: [...locked] }); await loadBanks(); };
@@ -295,7 +308,8 @@
       <div class="row no-print" style="margin-bottom:10px"><button class="btn ghost small" id="printL">🖨 Print lesson plans</button></div>
       ${allLevelLists().map((g, gi) => `<div class="card" style="margin-top:12px;background:var(--panel2)"><div class="row"><h3 style="margin:0">${esc(g.title)}</h3><span class="spacer"></span>
         <button class="btn ghost small no-print" data-open="${gi}">Open all</button><button class="btn ghost small no-print" data-lock="${gi}">Lock all</button></div>
-        ${g.list.map((l) => { const c = C[window.TEACH.levels[l.id]] || {}; return `<details class="lesson"><summary><label class="no-print" style="display:inline;margin:0" onclick="event.stopPropagation()"><input type="checkbox" data-lv="${l.id}" style="width:auto" ${locked.has(l.id) ? "" : "checked"}> Open</label>
+        ${g.list.map((l) => { if (l.quiz) return quizLesson(l, locked);
+          const c = l.kind ? C.project : C[window.TEACH.levels[l.id]] || {}; return `<details class="lesson"><summary><label class="no-print" style="display:inline;margin:0" onclick="event.stopPropagation()"><input type="checkbox" data-lv="${l.id}" style="width:auto" ${locked.has(l.id) ? "" : "checked"}> Open</label>
           <b>${levelNo(l, g.track)}. ${esc(l.title)}</b> <span class="chip">${esc(c.name || "")}</span></summary>
           <div class="lesson-body"><p><b>Big idea:</b> ${esc(c.idea || "")}</p>
           ${l.story ? `<p><b>The level:</b> ${esc(l.story)}</p>` : ""}

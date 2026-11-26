@@ -46,16 +46,25 @@
   }
 
   // ---------- join ----------
-  let track = "blocks";
-  document.querySelectorAll(".choice").forEach((el) => {
-    const pick = () => { track = el.dataset.track; document.querySelectorAll(".choice").forEach((c) => c.classList.toggle("selected", c === el)); };
-    el.addEventListener("click", pick);
-    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pick(); });
-  });
+  // each grade band is its own course page (/grades-1-3, /grades-4-6, /grades-7-9)
+  const L = (o) => (o && typeof o === "object" ? o[I18N.lang] || o.en : o);
+  const pathCourse = window.COURSES.find((c) => location.pathname.replace(/\/$/, "") === c.path);
+  let course = pathCourse || window.COURSES.find((c) => String(c.n) === store.get("bq_course")) || window.COURSES[1];
+  function renderCourseChoices() {
+    $("courseChoices").innerHTML = window.COURSES.map((c) => `<div class="card choice ${c === course ? "selected" : ""}" data-course="${c.n}" tabindex="0">
+      <div class="tag">${esc(T("gradesTag", { g: c.grades }))} · ${c.track === "python" ? "PYTHON" : esc(T("blocksTag"))}</div>
+      <h2 style="margin-top:8px">${esc(L(c.name))}</h2><p class="muted" style="margin:0">${esc(T(c.track === "python" ? "tPyText" : "tBlocksText"))}</p></div>`).join("");
+    $("courseChoices").querySelectorAll(".choice").forEach((el) => {
+      const pick = () => { course = window.COURSES.find((c) => String(c.n) === el.dataset.course); renderCourseChoices(); };
+      el.addEventListener("click", pick);
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pick(); });
+    });
+  }
   async function join(code, name, trk, pic) {
     const r = await api("/api/play/join", { code, name, track: trk, pic });
     if (r.needPic) return askPic(r.needPic, code, name, trk);
     me = r;
+    if (course.track !== me.track) course = window.COURSES.find((c) => c.track === me.track);
     store.set("bq_token", me.token); store.set("bq_code", code); store.set("bq_name", name); if (pic) store.set("bq_pic", pic);
     $("jpic").classList.add("hidden"); $("jform").classList.remove("hidden");
     enter();
@@ -76,7 +85,7 @@
   $("picBack").addEventListener("click", () => { $("jpic").classList.add("hidden"); $("jform").classList.remove("hidden"); });
   $("jgo").addEventListener("click", async () => {
     $("jerr").textContent = "";
-    try { await join($("jcode").value.trim().toUpperCase(), $("jname").value.trim(), track); }
+    try { await join($("jcode").value.trim().toUpperCase(), $("jname").value.trim(), course.track); }
     catch (e) { $("jerr").textContent = e.message; }
   });
   $("jname").addEventListener("keydown", (e) => { if (e.key === "Enter") $("jgo").click(); });
@@ -85,44 +94,80 @@
   $("watch").addEventListener("click", () => playIntro());
   I18N.onChange(() => {
     if (!me) return;
+    if (screen === "join") renderCourseChoices();
     if (screen === "map") showMap();
     else if (screen === "game") { show("game"); intro(); setWorkTitle(); updateCounter(); }
   });
   $("mapBtn").addEventListener("click", () => { stopRun(); project = null; showMap(); });
-  $("switchBtn").addEventListener("click", async () => {
-    try { await join(store.get("bq_code"), me.name, me.track === "blocks" ? "python" : "blocks", store.get("bq_pic") || undefined); } catch (e) { alert(e.message); }
-  });
+  // move to another course page; Python courses use the student's Python record, block courses their blocks record
+  async function goCourse(c) {
+    course = c; store.set("bq_course", String(c.n));
+    history.replaceState(null, "", c.path);
+    if (me && c.track !== me.track) {
+      try { await join(store.get("bq_code"), me.name, c.track, store.get("bq_pic") || undefined); } catch (e) { alert(e.message); }
+    } else if (me) enter();
+  }
   function showJoin() {
     const p = new URLSearchParams(location.search);
     $("jcode").value = p.get("code") || store.get("bq_code") || "";
     $("jname").value = store.get("bq_name") || "";
+    renderCourseChoices();
     show("join");
   }
-  function enter() { levels = window.LEVELS[me.track]; showMap(); }
+  const byId = (id) => [...window.LEVELS.blocks, ...window.LEVELS.python].find((l) => l.id === id);
+  // everything in a course, in order: per unit the levels, the unit project and the unit quiz; then the final project
+  function courseItems(c) {
+    const out = [];
+    c.units.forEach((u, ui) => {
+      u.levels.forEach((id) => out.push({ kind: "level", id, unit: ui }));
+      out.push({ kind: "project", id: u.project, unit: ui }, { kind: "quiz", id: u.quiz, unit: ui });
+    });
+    out.push({ kind: "final", id: c.final, unit: -1 });
+    return out;
+  }
+  let items = [];
+  function enter() {
+    if (course.track !== me.track) course = (pathCourse?.track === me.track && pathCourse) || window.COURSES.find((c) => String(c.n) === store.get("bq_course") && c.track === me.track) || window.COURSES.find((c) => c.track === me.track);
+    store.set("bq_course", String(course.n));
+    if (location.pathname !== course.path) history.replaceState(null, "", course.path);
+    items = courseItems(course);
+    levels = items.filter((it) => it.kind !== "quiz").map((it) => byId(it.id));
+    showMap();
+  }
+  const isDone = (id) => (me.progress[id] || 0) > 0;
+  const courseDone = () => items.every((it) => isDone(it.id));
 
-  // ---------- level map ----------
+  // ---------- course page ----------
   function starsHtml(n) { return "★".repeat(n) + "<i>" + "★".repeat(3 - n) + "</i>"; }
   function showMap() {
     project = null;
-    $("mapTitle").textContent = T(me.track === "blocks" ? "mapBlocks" : "mapPython");
-    const doneCount = levels.filter((l) => me.progress[l.id]).length;
-    $("mapDone").textContent = T("done", { a: doneCount, b: levels.length });
-    $("mapBar").style.width = Math.round((doneCount / levels.length) * 100) + "%";
+    $("mapTitle").textContent = `${L(course.name)} · ${T("gradesTag", { g: course.grades })}`;
+    const doneCount = items.filter((it) => isDone(it.id)).length;
+    $("mapDone").textContent = T("courseDone", { a: doneCount, b: items.length });
+    $("mapBar").style.width = Math.round((doneCount / items.length) * 100) + "%";
     $("mapSub").textContent = `${me.bankTitle}${me.teacher ? " · " + me.teacher : ""}`;
-    $("switchBtn").textContent = T(me.track === "blocks" ? "toPython" : "toBlocks");
+    $("courseNav").innerHTML = window.COURSES.map((c) => `<button class="btn ${c === course ? "" : "ghost"} small" data-go="${c.n}">${esc(T("gradesTag", { g: c.grades }))}</button>`).join("");
+    $("courseNav").querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => goCourse(window.COURSES.find((c) => String(c.n) === b.dataset.go))));
     const locked = new Set(me.locked || []);
-    // each stage (grade band) unlocks on its own; the teacher can also hold levels closed
-    let html = window.STAGES.filter((st) => st.track === me.track).map((st) => {
-      const list = levels.filter((l) => l.stage === st.n);
-      const done = list.filter((l) => me.progress[l.id]).length;
-      let open = true;
-      const cards = list.map((l) => {
-        const i = levels.indexOf(l), stars = me.progress[l.id] || 0, held = locked.has(l.id) && !stars, enabled = open && !held;
-        if (!stars) open = false;
-        return `<button class="level" data-i="${i}" ${enabled ? "" : "disabled"} ${held ? `title="${esc(T("lockedByTeacher"))}"` : ""}><div class="num">${i + 1}</div><b>${esc(LV("title", l))}</b><div class="stars">${enabled ? starsHtml(stars) : held ? "🔐" : "🔒"}</div></button>`;
-      }).join("");
-      return `<div class="stage-head"><h2>${esc(T("stage", { n: st.n, g: st.grades }))}</h2><span class="chip" dir="ltr">${done} / ${list.length}</span><span class="spacer"></span>${done === list.length ? `<a class="btn small" href="/certificate#${me.pkey}/${st.n}">${esc(T("cert"))}</a>` : ""}</div><div class="levels">${cards}</div>`;
+    let open = true;
+    const card = (it) => {
+      const stars = me.progress[it.id] || 0, held = locked.has(it.id) && !stars, enabled = open && !held;
+      if (!stars) open = false;
+      const lock = held ? "🔐" : "🔒";
+      if (it.kind === "quiz") return `<button class="level quiz" data-quiz="${it.id}" data-unit="${it.unit}" ${enabled ? "" : "disabled"}><div class="num">📝</div><b>${esc(T("unitQuiz"))}</b><div class="stars">${enabled ? starsHtml(stars) : lock}</div></button>`;
+      const l = byId(it.id), i = levels.indexOf(l);
+      const icon = it.kind === "project" ? "🛠️" : it.kind === "final" ? "🏁" : i + 1;
+      return `<button class="level ${it.kind}" data-i="${i}" ${enabled ? "" : "disabled"} ${held ? `title="${esc(T("lockedByTeacher"))}"` : ""}><div class="num">${icon}</div><b>${esc(LV("title", l))}</b><div class="stars">${enabled ? starsHtml(stars) : lock}</div></button>`;
+    };
+    let html = course.units.map((u, ui) => {
+      const unitItems = items.filter((it) => it.unit === ui), d = unitItems.filter((it) => isDone(it.id)).length;
+      return `<div class="unit"><div class="stage-head"><h2>${esc(T("unit", { n: ui + 1 }))} · ${esc(L(u.title))}</h2><span class="chip" dir="ltr">${d} / ${unitItems.length}</span></div>
+        <div class="levels">${unitItems.map(card).join("")}</div></div>`;
     }).join("");
+    const fin = items[items.length - 1];
+    html += `<div class="unit final-unit"><div class="stage-head"><h2>🏁 ${esc(T("finalProject"))}</h2></div><div class="levels">${card(fin)}
+      ${courseDone() ? `<a class="level cert-card" href="/certificate#${me.pkey}/${course.n}"><div class="num">🎓</div><b>${esc(T("certReady"))}</b><div class="muted">${esc(T("signedBy"))}</div></a>`
+        : `<div class="level cert-card off"><div class="num">🎓</div><b>${esc(T("certReady"))}</b><div class="muted">${esc(T("certLocked"))}</div></div>`}</div></div>`;
     // AI Lab
     const ai = window.AI_LEVELS || [], aiDone = ai.filter((a) => me.progress[a.id]).length;
     let aiOpen = true;
@@ -137,10 +182,49 @@
       <p class="muted" style="margin:-6px 0 10px">${esc(T("projSub"))}</p><div id="projList" class="levels"></div>`;
     $("levels").innerHTML = html;
     $("levels").querySelectorAll(".level[data-i]").forEach((b) => b.addEventListener("click", () => openLevel(Number(b.dataset.i))));
+    $("levels").querySelectorAll(".level[data-quiz]").forEach((b) => b.addEventListener("click", () => openQuiz(b.dataset.quiz, Number(b.dataset.unit))));
     $("levels").querySelectorAll(".level[data-ai]").forEach((b) => b.addEventListener("click", () => openAI(Number(b.dataset.ai))));
     $("projNew").addEventListener("click", () => openProject(null));
     loadProjects();
     show("map");
+  }
+
+  // ---------- unit quiz ----------
+  function openQuiz(id, unit) {
+    const qs = window.QUIZZES[id] || [], need = Math.ceil(qs.length * 0.75);
+    let n = 0, right = 0;
+    const ask = () => {
+      const q = qs[n];
+      modal(`<h3>${esc(T("quizHead", { u: unit + 1, a: n + 1, b: qs.length }))}</h3><p style="font-size:18px;font-weight:800">${esc(L(q.q))}</p>
+        ${q.code ? `<pre class="codebox quiz-code" dir="ltr">${esc(q.code)}</pre>` : ""}
+        <div id="opts">${q.o.map((o, i) => `<button class="opt" data-i="${i}" dir="auto">${String.fromCharCode(65 + i)}. ${esc(L(o))}</button>`).join("")}</div>
+        <div id="qres" style="min-height:26px;font-weight:800;margin:8px 0"></div><button id="qnext" class="btn hidden">${esc(T(n === qs.length - 1 ? "quizDone" : "quizNext"))}</button>`);
+      const buttons = [...document.querySelectorAll("#opts .opt")];
+      buttons.forEach((b) => b.addEventListener("click", () => {
+        buttons.forEach((x) => (x.disabled = true));
+        const ok = Number(b.dataset.i) === q.a;
+        if (ok) right++;
+        buttons[q.a].classList.add("right"); if (!ok) b.classList.add("wrong");
+        $("qres").innerHTML = ok ? `<span class="ok">${esc(T("correctShort"))}</span>` : `<span class="error">${esc(T("wrongAns", { l: String.fromCharCode(65 + q.a) }))}</span>`;
+        $("qnext").classList.remove("hidden"); $("qnext").focus();
+      }));
+      $("qnext").addEventListener("click", () => { n++; n < qs.length ? ask() : finish(); });
+    };
+    const finish = async () => {
+      const passed = right >= need, stars = right === qs.length ? 3 : 2;
+      api("/api/play/attempt", { token: me.token, levelId: id, ok: passed, code: `quiz: ${right} / ${qs.length}` }).catch(() => {});
+      if (passed) {
+        try { const r = await api("/api/play/progress", { token: me.token, levelId: id, stars }); me.gems = r.gems; } catch {}
+        me.progress[id] = Math.max(me.progress[id] || 0, stars);
+      }
+      modal(`<h2 style="text-align:center;color:var(--yellow)">${esc(T(passed ? "quizPassTitle" : "quizFailTitle"))}</h2>
+        ${passed ? `<div class="bigstars">${starsHtml(stars)}</div>` : ""}
+        <p style="text-align:center">${esc(T(passed ? "quizPass" : "quizFail", { s: right, t: qs.length, p: need }))}</p>
+        <div class="row" style="justify-content:center">${passed ? `<button id="qmap" class="btn">${esc(T("toCourse"))}</button>` : `<button id="qmap" class="btn ghost">${esc(T("toCourse"))}</button><button id="qagain" class="btn">${esc(T("quizRetry"))}</button>`}</div>`);
+      $("qmap").addEventListener("click", () => { closeModal(); showMap(); });
+      $("qagain")?.addEventListener("click", () => { n = 0; right = 0; ask(); });
+    };
+    ask();
   }
   function openAI(i) {
     BQ.AI.open(window.AI_LEVELS[i], i, async (stars) => {
@@ -513,13 +597,17 @@
   function closeModal() { $("modal").classList.add("hidden"); }
 
   function winModal(stars, used) {
-    const last = levelIndex === levels.length - 1;
-    modal(`<h2 style="text-align:center;color:var(--yellow)">${esc(T("winTitle", { n: levelIndex + 1 }))}</h2><div class="bigstars">${starsHtml(stars)}</div>
+    const k = items.findIndex((it) => it.id === level.id), next = items[k + 1];
+    const isFinal = level.kind === "final";
+    const nextBtn = isFinal ? (courseDone() ? `<a id="tocert" class="btn" href="/certificate#${me.pkey}/${course.n}">${esc(T("getCert"))}</a>` : `<button id="tomap" class="btn">${esc(T("toCourse"))}</button>`)
+      : next?.kind === "quiz" ? `<button id="toquiz" class="btn">${esc(T("nextQuiz"))}</button>`
+      : next ? `<button id="next" class="btn">${esc(T("next"))}</button>` : `<button id="tomap" class="btn">${esc(T("toCourse"))}</button>`;
+    modal(`<h2 style="text-align:center;color:var(--yellow)">${esc(isFinal ? T("finalDone") : level.kind === "project" ? T("projectDone") : T("winTitle", { n: levelIndex + 1 }))}</h2><div class="bigstars">${starsHtml(stars)}</div>
       <p style="text-align:center"><b>${esc(T(me.track === "blocks" ? "usedBlocks" : "usedLines", { n: used }))}</b> ${esc(stars < 3 ? T("for3", { p: level.par }) : T("perfect"))}</p>
-      <p style="text-align:center" class="muted">${last ? esc(T("allDone")) : ""}</p>
-      <div class="row" style="justify-content:center"><button id="again" class="btn ghost">${esc(T("again"))}</button>${last ? `<button id="tomap" class="btn">${esc(T("allLevels"))}</button>` : `<button id="next" class="btn">${esc(T("next"))}</button>`}</div>`);
+      <div class="row" style="justify-content:center"><button id="again" class="btn ghost">${esc(T("again"))}</button>${nextBtn}</div>`);
     $("again").addEventListener("click", () => { closeModal(); stopRun(); intro(); });
-    $("next")?.addEventListener("click", () => { closeModal(); openLevel(levelIndex + 1); });
+    $("next")?.addEventListener("click", () => { closeModal(); openLevel(levels.indexOf(byId(next.id))); });
+    $("toquiz")?.addEventListener("click", () => { closeModal(); stopRun(); showMap(); openQuiz(next.id, next.unit); });
     $("tomap")?.addEventListener("click", () => { closeModal(); stopRun(); showMap(); });
   }
 
@@ -535,7 +623,9 @@
     }
     const urlCode = new URLSearchParams(location.search).get("code");
     if (token && (!urlCode || urlCode.toUpperCase() === store.get("bq_code"))) {
-      try { me = await api("/api/play/state?token=" + token); return enter(); } catch { store.del("bq_token"); }
+      try { me = await api("/api/play/state?token=" + token); } catch { store.del("bq_token"); me = null; }
+      // opening a course page of the other track (e.g. /grades-7-9 while on blocks) switches the student's record
+      if (me) return pathCourse && pathCourse.track !== me.track ? goCourse(pathCourse) : enter();
     }
     showJoin();
   })();

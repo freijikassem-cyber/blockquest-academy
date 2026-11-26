@@ -119,7 +119,7 @@
     projFinished: "Program finished! 🎉", projView: "A project by {a}. Press Run to watch it!", projNotFound: "This project link doesn't work.",
     projSaveFirst: "Save your project first.", projBack: "← My Projects",
     t_grass: "grass", t_sand: "sand", t_water: "water", t_lava: "lava", t_tree: "tree", t_rock: "rock", t_ore: "crystal ore", t_gem: "gem", t_flag: "flag",
-    certTitle: "Certificate of Achievement", certThis: "This certificate is proudly given to", certDid: "for completing {stage} of BlockQuest Academy",
+    certTitle: "Certificate of Completion", certThis: "This certificate is proudly given to", certDid: "for completing {stage} of BlockQuest Academy",
     certStars: "with {n} of {m} stars", certClass: "Class", certTeacher: "Teacher", certDate: "Date", certPrint: "🖨 Print or save as PDF",
     certNotYet: "This stage is not finished yet. Keep going!", certBack: "← Back",
     pTrackAI: "AI Lab", pStage: "Stage {n} · Grades {g}",
@@ -142,10 +142,30 @@
     projFinished: "انتهى البرنامج! 🎉", projView: "مشروع من صنع {a}. اضغط تشغيل لتشاهده!", projNotFound: "رابط المشروع هذا لا يعمل.",
     projSaveFirst: "احفظ مشروعك أولاً.", projBack: "→ مشاريعي",
     t_grass: "عشب", t_sand: "رمل", t_water: "ماء", t_lava: "حمم", t_tree: "شجرة", t_rock: "صخرة", t_ore: "خام بلّور", t_gem: "جوهرة", t_flag: "علم",
-    certTitle: "شهادة إنجاز", certThis: "تُمنح هذه الشهادة بكل فخر إلى", certDid: "لإتمام {stage} في أكاديمية بلوك كويست",
+    certTitle: "شهادة إتمام", certThis: "تُمنح هذه الشهادة بكل فخر إلى", certDid: "لإتمام {stage} في أكاديمية بلوك كويست",
     certStars: "بـ {n} من {m} نجمة", certClass: "الصف", certTeacher: "المعلم", certDate: "التاريخ", certPrint: "🖨 طباعة أو حفظ PDF",
     certNotYet: "هذه المرحلة لم تكتمل بعد. واصل التقدّم!", certBack: "→ رجوع",
     pTrackAI: "مختبر الذكاء الاصطناعي", pStage: "المرحلة {n} · الصفوف {g}",
+  });
+  Object.assign(S.en, {
+    chooseCourse: "Choose your course", gradesTag: "GRADES {g}", blocksTag: "BLOCKS",
+    courseDone: "{a} of {b} done", unit: "Unit {n}", unitQuiz: "Unit quiz", finalProject: "Final project",
+    certReady: "Certificate of completion", signedBy: "Signed by Kassem Freiji", certLocked: "Finish every unit and the final project to unlock it.",
+    quizHead: "Unit {u} quiz · question {a} of {b}", quizNext: "Next question ▶", quizDone: "Finish ▶", correctShort: "Correct! ✓",
+    quizPassTitle: "Quiz passed! 🎉", quizFailTitle: "Almost there!", quizPass: "{s} of {t} correct. The next unit is open!",
+    quizFail: "{s} of {t} correct. You need {p} to pass. Look back at the unit's levels, then try again.", quizRetry: "Try again", toCourse: "Back to the course",
+    nextQuiz: "📝 Take the unit quiz", getCert: "🎓 Get your certificate", projectDone: "Unit project complete! 🛠️", finalDone: "Final project complete! 🏁",
+    certSigned: "Course creator", certNo: "Certificate no.", certVerify: "Check this certificate online at",
+  });
+  Object.assign(S.ar, {
+    chooseCourse: "اختر دورتك", gradesTag: "الصفوف {g}", blocksTag: "القطع",
+    courseDone: "أنجزت {a} من {b}", unit: "الوحدة {n}", unitQuiz: "اختبار الوحدة", finalProject: "المشروع النهائي",
+    certReady: "شهادة إتمام", signedBy: "موقّعة من قاسم فريجي", certLocked: "أنهِ كل الوحدات والمشروع النهائي لتفتحها.",
+    quizHead: "اختبار الوحدة {u} · السؤال {a} من {b}", quizNext: "السؤال التالي ◀", quizDone: "إنهاء ◀", correctShort: "صحيح! ✓",
+    quizPassTitle: "نجحت في الاختبار! 🎉", quizFailTitle: "اقتربت!", quizPass: "{s} من {t} صحيحة. الوحدة التالية مفتوحة!",
+    quizFail: "{s} من {t} صحيحة. تحتاج {p} لتنجح. راجع مستويات الوحدة ثم حاول من جديد.", quizRetry: "حاول من جديد", toCourse: "العودة إلى الدورة",
+    nextQuiz: "📝 ابدأ اختبار الوحدة", getCert: "🎓 احصل على شهادتك", projectDone: "اكتمل مشروع الوحدة! 🛠️", finalDone: "اكتمل المشروع النهائي! 🏁",
+    certSigned: "مُنشئ الدورة", certNo: "رقم الشهادة", certVerify: "تحقق من هذه الشهادة على",
   });
   const get = () => { try { return localStorage.getItem("bq_lang") === "ar" ? "ar" : "en"; } catch { return "en"; } };
   let lang = get();

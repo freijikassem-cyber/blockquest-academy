@@ -128,6 +128,13 @@ window.TEACH = {
       unplugged: "One student is the “danger()” function and answers True/False about picture cards; another acts on the answers.",
       check: "What is the difference between print and return?",
     },
+    project: {
+      name: "Project (check for understanding)", idea: "A bigger challenge that mixes every idea from the unit or course. There is no new idea here: students plan, test and debug on their own.",
+      vocab: ["plan", "test", "debug", "combine"],
+      warmup: "Show the project map. In pairs, students point out each obstacle and say which block or command handles it.",
+      unplugged: "Students write their plan on paper first (arrows or code), swap with a partner, and trace each other's plan on the map.",
+      check: "Which idea from this unit did your solution use, and where?",
+    },
     ai: {
       name: "Artificial intelligence: learning from examples", idea: "An AI learns from labelled examples instead of written rules. What it learns depends on the data it is given.",
       vocab: ["artificial intelligence", "training data", "label", "test", "bias"],

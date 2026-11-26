@@ -37,11 +37,8 @@
       <div class="field" style="flex:1;min-width:180px"><label for="jcode" data-i18n="classCode"></label><input id="jcode" maxlength="6" autocomplete="off" style="text-transform:uppercase;letter-spacing:4px;font-weight:800"></div>
       <div class="field" style="flex:2;min-width:200px"><label for="jname" data-i18n="yourName"></label><input id="jname" maxlength="40" autocomplete="off"></div>
     </div>
-    <label data-i18n="chooseTrack"></label>
-    <div class="choices" style="margin-bottom:16px">
-      <div class="card choice selected" data-track="blocks" tabindex="0"><div class="tag" data-i18n="tBlocksTag"></div><h2 style="margin-top:8px" data-i18n="tBlocksName"></h2><p class="muted" style="margin:0" data-i18n="tBlocksText"></p></div>
-      <div class="card choice" data-track="python" tabindex="0"><div class="tag" data-i18n="tPyTag"></div><h2 style="margin-top:8px" data-i18n="tPyName"></h2><p class="muted" style="margin:0" data-i18n="tPyText"></p></div>
-    </div>
+    <label data-i18n="chooseCourse"></label>
+    <div class="choices three" id="courseChoices" style="margin-bottom:16px"></div>
     <div class="error" id="jerr"></div>
     <button id="jgo" class="btn" data-i18n="start"></button>
    </div>
@@ -53,7 +50,7 @@
   <div class="row" style="margin:10px 0 18px">
     <div><h1 id="mapTitle" style="margin:0"></h1><div id="mapSub" class="muted"></div></div>
     <span class="spacer"></span>
-    <button id="switchBtn" class="btn ghost small"></button>
+    <div id="courseNav" class="row" style="gap:6px"></div>
   </div>
   <div class="mapbar"><b id="mapDone"></b><div class="pbar"><b id="mapBar"></b></div></div>
   <div id="levels"></div>
@@ -107,6 +104,7 @@
 <script src="/vendor/skulpt/skulpt-stdlib.js"></script>
 <script src="/levels.js"></script>
 <script src="/lessons.js"></script>
+<script src="/quizzes.js"></script>
 <script src="/i18n.js"></script>
 <script src="/engine.js"></script>
 <script src="/intro.js"></script>

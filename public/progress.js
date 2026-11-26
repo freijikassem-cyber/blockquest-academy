@@ -29,11 +29,14 @@
         <div class="pbar"><b style="width:${Math.round((n / list.length) * 100)}%"></b></div><div class="plevels">${list.map((l, i) => levelCell(l, i, get(l))).join("")}</div></div>`;
     };
     const blank = { stars: 0, runs: 0, fails: 0 };
-    let sections = window.STAGES.map((st) => {
-      const tr = data.tracks[st.track];
-      if (tr) gems = Math.max(gems, 0) + (st === window.STAGES.find((x) => x.track === st.track) ? tr.gems : 0);
-      const list = window.LEVELS[st.track].filter((l) => l.stage === st.n);
-      return section(T("pStage", { n: st.n, g: st.grades }) + " · " + T(st.track === "blocks" ? "pTrackBlocks" : "pTrackPython"), list, (l) => tr?.levels[l.id] || blank, st.n, !!tr && list.some((l) => tr.levels[l.id]));
+    const L = (o) => (o && typeof o === "object" ? o[I18N.lang] || o.en : o);
+    const byId = (id) => [...window.LEVELS.blocks, ...window.LEVELS.python].find((l) => l.id === id);
+    const counted = new Set();
+    let sections = window.COURSES.map((c) => {
+      const tr = data.tracks[c.track];
+      if (tr && !counted.has(c.track)) { gems += tr.gems; counted.add(c.track); }
+      const list = [...c.units.flatMap((u, ui) => [...u.levels.map(byId), byId(u.project), { id: u.quiz, title: `${T("unitQuiz")} ${ui + 1}` }]), byId(c.final)];
+      return section(`${L(c.name)} · ${T("gradesTag", { g: c.grades }).toLowerCase()}`, list, (l) => tr?.levels[l.id] || blank, c.n, !!tr && list.some((l) => tr.levels[l.id]));
     }).join("");
     // AI Lab results can be saved on either track record: take the best
     const aiBest = (l) => Object.values(data.tracks).map((tr) => tr.levels[l.id]).filter(Boolean).sort((a, b) => (b.stars || 0) - (a.stars || 0))[0] || blank;

@@ -236,3 +236,19 @@ details.lesson { border-top: 1px solid var(--line); padding: 8px 0; }
 details.lesson summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .lesson-body { padding: 6px 0 4px 28px; } .lesson-body p { margin: 6px 0; }
 @media print { #side, .tabs, .modal { display: none !important; } .card { background: #fff !important; color: #000; box-shadow: none; } details.lesson { break-inside: avoid; } }
+/* ---------- course pages ---------- */
+.choices.three { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .choices.three { grid-template-columns: 1fr; } }
+.unit { margin-bottom: 8px; }
+.level.project { border-color: var(--teal); }
+.level.quiz { border-color: var(--blue); }
+.level.final { border-color: var(--yellow); background: rgba(255, 210, 63, .08); }
+.level.cert-card { text-decoration: none; color: inherit; border: 2px solid var(--yellow); }
+.level.cert-card.off { opacity: .55; }
+.quiz-code { max-width: none; margin-bottom: 10px; }
+.cert .meta { align-items: flex-end; }
+.cert .sign { display: flex; flex-direction: column; align-items: center; min-width: 220px; }
+.cert .sign img { max-height: 70px; max-width: 220px; }
+.cert .sig-script { font-family: "Great Vibes", cursive; font-size: 40px; line-height: 1; color: #1d2b6b; }
+.cert .sig-line { display: block; width: 220px; border-top: 1.5px solid #1d2340; margin: 4px 0 6px; }
+.cert .muted-dark { display: block; font-size: 12px; color: #6b7290; }

@@ -166,6 +166,56 @@ window.LEVELS = {
       grid: ["..T.....", "........", "^^^^^^^^", ".~R.O~OF", "^^^^^^^^", "........", ".....T..", "........"],
       start: [0, 3, "E"], goal: { collect: { gem: 2 } }, tools: ["forward", "turn", "mine", "place", "repeat", "until", "if"],
     },
+    // ---------------- unit projects and final projects (blocks)
+    {
+      id: "b30", stage: 1, kind: "project", title: "Project: Gem Path", par: 9,
+      story: "Unit project! Climb up to collect two gems, turn, grab the third gem and reach the flag. Use everything you learned.",
+      hint: "4 forward (up), turn right, then 4 forward.",
+      grid: ["........", "....T...", "...*.F..", ".*......", "........", ".*......", "........", "....T..."],
+      start: [1, 6, "N"], goal: { collect: { gem: 3 } }, tools: ["forward", "turn"],
+    },
+    {
+      id: "b31", stage: 1, kind: "project", title: "Project: Forest Run", par: 5,
+      story: "Unit project! Three trees block the path. Find the pattern, put it in a repeat, and bring back 3 wood.",
+      hint: "Repeat 3 times: forward, mine, forward. Then one more forward.",
+      grid: ["........", "........", ".T....T.", ",,,,,,,,", "..T.T.TF", ",,,,,,,,", "........", "...T...."],
+      start: [0, 4, "E"], goal: { collect: { wood: 3 } }, tools: ["forward", "turn", "mine", "repeat"],
+    },
+    {
+      id: "b40", stage: 1, kind: "final", title: "Final Project: Garden Adventure", par: 10,
+      story: "Final project! Walk up to grab the gem, turn, then chop through the garden to the flag. Show me everything you know!",
+      hint: "3 forward, turn right, repeat 2 times (forward, mine, forward), then 2 forward.",
+      grid: ["........", ".T....T.", "........", "........", "...T.T.F", ".*......", "........", "........"],
+      start: [1, 7, "N"], goal: { collect: { gem: 1, wood: 2 } }, tools: ["forward", "turn", "mine", "repeat"],
+    },
+    {
+      id: "b32", stage: 2, kind: "project", title: "Project: Quarry Trail", par: 11,
+      story: "Unit project! A rock and a tree block the trail. Mine them, make the turn, and reach the flag.",
+      hint: "Forward, mine, 3 forward, turn left, forward, mine, 3 forward.",
+      grid: ["......R.", "........", "....F...", "........", "....T...", "........", "..R.....", ".T....T."],
+      start: [0, 6, "E"], goal: { collect: { stone: 1, wood: 1 } }, tools: ["forward", "turn", "mine"],
+    },
+    {
+      id: "b33", stage: 2, kind: "project", title: "Project: Bridge Loops", par: 5,
+      story: "Unit project! Three streams, all the same width. Build a bridge, walk, walk... and let a loop do the work.",
+      hint: "Repeat 3 times: place plank, forward, forward. Then one more forward.",
+      grid: ["........", ".T....T.", "........", ".~.~.~.F", "........", "..T.....", "........", "........"],
+      start: [0, 3, "E"], goal: {}, tools: ["forward", "turn", "place", "repeat"],
+    },
+    {
+      id: "b34", stage: 2, kind: "project", title: "Project: Smart Explorer", par: 10,
+      story: "Unit project! Water, a rock, a tree and crystal ore, all on one lava bridge. Build one smart loop that handles them all.",
+      hint: "Repeat until flag: if water → place plank. If rock → mine. If tree → mine. If crystal ore → mine. Then move forward.",
+      grid: ["........", "...T....", "^^^^^^^^", ".~R.TO.F", "^^^^^^^^", "........", "....R...", "........"],
+      start: [0, 3, "E"], goal: { collect: { stone: 1, wood: 1, gem: 1 } }, tools: ["forward", "turn", "mine", "place", "repeat", "until", "if"],
+    },
+    {
+      id: "b41", stage: 2, kind: "final", title: "Final Project: Grand Expedition", par: 13,
+      story: "Final project! Cross the river path, turn, and climb past lava and a tree to the flag. Use loops and if blocks to plan it all.",
+      hint: "Repeat 6: (if water → place plank, if rock → mine, forward). Turn left. Repeat 5: (if lava → place stone, if tree → mine, forward).",
+      grid: ["........", "......F.", "......T.", "..T.....", "......^.", "........", ".~.R.~..", "^^^^^^^^"],
+      start: [0, 6, "E"], goal: { collect: { stone: 1, wood: 1 } }, tools: ["forward", "turn", "mine", "place", "repeat", "until", "if"],
+    },
   ],
   python: [
     // ---------------- Stage 3 · Grades 7–9
@@ -305,5 +355,69 @@ window.LEVELS = {
       start: [0, 3, "E"], goal: { collect: { gem: 1 } },
       starter: "def danger():\n    return hero.ahead() == \"water\"\n\nwhile not hero.at_goal():\n    if danger():\n        hero.place(\"stone\")\n    else:\n        hero.move()\n",
     },
+      // ---------------- unit projects and final project (python)
+    {
+      id: "p30", stage: 3, kind: "project", title: "Project: Python Postcard", par: 7,
+      story: "Unit project! Walk, turn, chop the tree, turn again, build a bridge and reach the flag, all with Python commands.",
+      hint: "hero.move(3), hero.turn_left(), hero.mine(), hero.move(2), hero.turn_right(), hero.place(\"plank\"), hero.move(3).",
+      grid: ["........", ".T......", "......T.", "........", "....~.F.", "...T....", "........", "..T....."],
+      start: [0, 6, "E"], goal: { collect: { wood: 1 } },
+      starter: "# Unit project\nhero.move(3)\n",
+    },
+    {
+      id: "p31", stage: 3, kind: "project", title: "Project: Loop Garden", par: 3,
+      story: "Unit project! Four gems hide around the garden pond. One for loop can walk the whole square.",
+      hint: "for i in range(4): then indented: hero.move(5) and hero.turn_right().",
+      grid: ["........", "......*.", "........", ".*~~~~..", "..~~~~..", "..~~~~..", ".*....*.", "........"],
+      start: [1, 1, "E"], goal: { collect: { gem: 4 } },
+      starter: "for i in range(4):\n    hero.move(5)\n",
+    },
+    {
+      id: "p32", stage: 3, kind: "project", title: "Project: Bridge Function", par: 10,
+      story: "Unit project! Two rivers of different widths and a rock. Write a function with a parameter for the bridges.",
+      hint: "def cross(n): for i in range(n): place a plank and move. Then: cross(2), hero.move(), hero.mine(), hero.move(), cross(1), hero.move(2).",
+      grid: ["........", "...T....", "TTTTTTTT", ".~~.R~.F", "TTTTTTTT", "........", "......T.", "........"],
+      start: [0, 3, "E"], goal: { collect: { stone: 1 } },
+      starter: "def cross(n):\n    for i in range(n):\n        hero.place(\"plank\")\n        hero.move()\n\ncross(2)\n",
+    },
+    {
+      id: "p33", stage: 3, kind: "project", title: "Project: Data Trail", par: 8,
+      story: "Unit project! The trail zigzags: left, right, left. Keep the step lengths in a list and a True/False variable to switch the turns.",
+      hint: "left = True. for steps in [3, 2, 3, 2]: hero.move(steps); if left: turn left, else: turn right; then left = not left.",
+      grid: ["........", ".T......", "........", "......F.", "........", "...*..*.", "........", "...*...."],
+      start: [0, 7, "E"], goal: { collect: { gem: 3 } },
+      starter: "left = True\nfor steps in [3, 2]:\n    hero.move(steps)\n",
+    },
+    {
+      id: "p40", stage: 3, kind: "final", title: "Final Project: Mission Control", par: 12,
+      story: "Final project! A long trail with water, a rock, crystal ore, lava and a tree. Write a clear() function, then loop through a list of distances.",
+      hint: "def clear(): place a stone on water or lava, mine trees, rocks and ore. Then: for steps in [6, 4]: for i in range(steps): clear(); hero.move(). Then hero.turn_left().",
+      grid: ["........", "........", "......F.", "......T.", "........", "......^.", ".~.R.O..", "........"],
+      start: [0, 6, "E"], goal: { collect: { gem: 1, stone: 1, wood: 1 } },
+      starter: "def clear():\n    what = hero.ahead()\n    # check for water, lava, tree, rock and ore here\n\nfor steps in [6, 4]:\n    for i in range(steps):\n        clear()\n        hero.move()\n    hero.turn_left()\n",
+    },
   ],
 };
+
+// Course pages: each grade band is its own page, split into units.
+// A unit = levels, then a unit project, then a unit quiz (see quizzes.js). The course ends with a final project.
+window.COURSES = [
+  { n: 1, track: "blocks", grades: "1–3", path: "/grades-1-3", name: { en: "Little Explorers", ar: "المستكشفون الصغار" },
+    units: [
+      { title: { en: "First Steps", ar: "الخطوات الأولى" }, levels: ["b15", "b16", "b17", "b20"], project: "b30", quiz: "q11" },
+      { title: { en: "Turns, Chops and Loops", ar: "استدارات وقطع وتكرار" }, levels: ["b18", "b19", "b21", "b22"], project: "b31", quiz: "q12" },
+    ], final: "b40" },
+  { n: 2, track: "blocks", grades: "4–6", path: "/grades-4-6", name: { en: "Explorers", ar: "المستكشفون" },
+    units: [
+      { title: { en: "Paths and Actions", ar: "الطرق والأفعال" }, levels: ["b1", "b2", "b9", "b3", "b10"], project: "b32", quiz: "q21" },
+      { title: { en: "Loops and Bridges", ar: "التكرار والجسور" }, levels: ["b4", "b5", "b11", "b6", "b12"], project: "b33", quiz: "q22" },
+      { title: { en: "Smart Code", ar: "الكود الذكي" }, levels: ["b7", "b13", "b8", "b14"], project: "b34", quiz: "q23" },
+    ], final: "b41" },
+  { n: 3, track: "python", grades: "7–9", path: "/grades-7-9", name: { en: "Python Coders", ar: "مبرمجو بايثون" },
+    units: [
+      { title: { en: "Python Basics", ar: "أساسيات بايثون" }, levels: ["p1", "p8", "p2", "p9", "p10"], project: "p30", quiz: "q31" },
+      { title: { en: "Loops", ar: "الحلقات" }, levels: ["p3", "p11", "p12", "p13", "p5"], project: "p31", quiz: "q32" },
+      { title: { en: "Decisions and Functions", ar: "القرارات والدوال" }, levels: ["p4", "p17", "p6", "p14"], project: "p32", quiz: "q33" },
+      { title: { en: "Data and Toolkits", ar: "البيانات وصناديق الأدوات" }, levels: ["p15", "p16", "p18"], project: "p33", quiz: "q34" },
+    ], final: "p40" },
+];
