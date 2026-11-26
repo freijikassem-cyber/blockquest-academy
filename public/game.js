@@ -1,4 +1,4 @@
-// BlockQuest play page: join → level map → code → run → quiz
+// BlockQuest play page: join → level map → code → run → win (gems per star)
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -343,49 +343,20 @@
     running = false; $("run").disabled = false;
   });
 
-  // ---------- win + quiz ----------
+  // ---------- win ----------
   async function win() {
     const used = me.track === "blocks" ? blockCount() : lineCount();
     const stars = used <= level.par ? 3 : used <= level.par + (me.track === "blocks" ? 2 : 3) ? 2 : 1;
     say(esc(T("complete")), "good");
     await renderer.celebrate();
-    try { await api("/api/play/progress", { token: me.token, levelId: level.id, stars }); } catch {}
+    try { const r = await api("/api/play/progress", { token: me.token, levelId: level.id, stars }); me.gems = r.gems; $("gems").textContent = "💎 " + me.gems; } catch {}
     me.progress[level.id] = Math.max(me.progress[level.id] || 0, stars);
-    await quiz(2);
     winModal(stars, used);
     running = false; $("run").disabled = false;
   }
   function modal(html) { $("modalCard").innerHTML = html; $("modal").classList.remove("hidden"); }
   function closeModal() { $("modal").classList.add("hidden"); }
 
-  async function quiz(count) {
-    const asked = [];
-    for (let n = 0; n < count; n++) {
-      let q;
-      try { q = (await api(`/api/play/question?token=${me.token}&exclude=${asked.join(",")}`)).question; } catch { return; }
-      if (!q || asked.includes(q.id)) return;
-      asked.push(q.id);
-      await new Promise((resolve) => {
-        modal(`<h3>${esc(T("quizTitle", { a: n + 1, b: count }))}</h3><p style="font-size:19px;font-weight:800" dir="auto">${esc(q.text)}</p>
-          <div id="opts">${q.options.map((o, i) => `<button class="opt" data-i="${i}" dir="auto">${String.fromCharCode(65 + i)}. ${esc(o)}</button>`).join("")}</div>
-          <div id="qres" style="min-height:26px;font-weight:800;margin:8px 0"></div><button id="qnext" class="btn hidden">${esc(T("cont"))}</button>`);
-        const buttons = [...document.querySelectorAll("#opts .opt")];
-        buttons.forEach((b) => b.addEventListener("click", async () => {
-          buttons.forEach((x) => (x.disabled = true));
-          try {
-            const r = await api("/api/play/answer", { token: me.token, questionId: q.id, chosen: Number(b.dataset.i) });
-            buttons[r.answer]?.classList.add("right");
-            if (!r.correct) b.classList.add("wrong");
-            me.gems = r.gems; $("gems").textContent = "💎 " + me.gems;
-            $("qres").innerHTML = r.correct ? `<span class="ok">${esc(T("correct"))}</span>` : `<span class="error">${esc(T("wrongAns", { l: String.fromCharCode(65 + r.answer) }))}</span>`;
-          } catch (e) { $("qres").textContent = e.message; }
-          $("qnext").classList.remove("hidden"); $("qnext").focus();
-        }));
-        $("qnext").addEventListener("click", resolve);
-      });
-    }
-    closeModal();
-  }
   function winModal(stars, used) {
     const last = levelIndex === levels.length - 1;
     modal(`<h2 style="text-align:center;color:var(--yellow)">${esc(T("winTitle", { n: levelIndex + 1 }))}</h2><div class="bigstars">${starsHtml(stars)}</div>

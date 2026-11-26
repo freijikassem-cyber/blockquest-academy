@@ -41,7 +41,7 @@ await call("POST", "/api/play/attempt", { token: st.token, levelId: "b1", ok: tr
 await call("POST", "/api/play/progress", { token: st.token, levelId: "b1", stars: 2 });
 await call("POST", "/api/play/progress", { token: st.token, levelId: "b1", stars: 1 });
 const state = await call("GET", `/api/play/state?token=${st.token}`);
-ok(state.progress.b1 === 2 && state.gems === 10, "progress keeps best stars");
+ok(state.progress.b1 === 2 && state.gems === 30, "progress keeps best stars; 10 gems per new star");
 
 const rep = await call("GET", `/api/banks/${bank.id}/report`);
 const row = rep.students.find((s) => s.track === "blocks");

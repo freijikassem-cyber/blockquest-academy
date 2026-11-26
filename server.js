@@ -328,9 +328,13 @@ app.post("/api/play/progress", async (req, res) => {
   const levelId = String(req.body.levelId || "").slice(0, 20);
   const stars = Math.min(Math.max(Number(req.body.stars) || 1, 1), 3);
   if (!/^[bp]\d+$/.test(levelId)) return res.status(400).json({ error: "Bad level." });
+  // 10 gems per new star (replaying a level only pays for stars beyond the best so far)
+  const before = (await get("SELECT stars FROM progress WHERE student_id=? AND level_id=?", s.id, levelId))?.stars || 0;
+  const earned = Math.max(0, stars - before) * 10;
+  if (earned) await run("UPDATE students SET gems=gems+? WHERE id=?", earned, s.id);
   await run(`INSERT INTO progress(student_id,level_id,stars) VALUES(?,?,?)
      ON CONFLICT(student_id,level_id) DO UPDATE SET stars=GREATEST(progress.stars,excluded.stars), at=NOW_TS`, s.id, levelId, stars);
-  res.json({ ok: true });
+  res.json({ ok: true, earned, gems: s.gems + earned });
 });
 
 app.post("/api/play/attempt", async (req, res) => {
