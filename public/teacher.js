@@ -154,9 +154,10 @@
       return { questions: [], text: ta.value };
     }
     if (ext === "pdf") {
-      await lib("/vendor/pdfjs/pdf.min.js");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.js";
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      // pdf.js ships as an ES module; scripting stays off (the default) so a PDF can't run code
+      const pdfjsLib = await import("/vendor/pdfjs/pdf.min.mjs");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
+      const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false, enableScripting: false }).promise;
       let text = "";
       for (let i = 1; i <= pdf.numPages; i++) { const c = await (await pdf.getPage(i)).getTextContent(); text += c.items.map((it) => it.str + (it.hasEOL ? "\n" : " ")).join("") + "\n\n"; }
       return { questions: [], text };
