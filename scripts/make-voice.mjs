@@ -49,7 +49,9 @@ if (process.argv.includes("--samples")) {
 } else {
   const voices = { en: [arg("en", "Daniel"), (/Neural$/.test(arg("en", "")) ? arg("en-rate", "+0%") : Number(arg("en-rate", 175)))], ar: [arg("ar", "Majed"), (/Neural$/.test(arg("ar", "")) ? arg("ar-rate", "+0%") : Number(arg("ar-rate", 160)))] };
   let n = 0;
+  const only = arg("only", "") ? arg("only").split(",") : null; // e.g. --only b15,b16
   for (const [id, lesson] of Object.entries(window.LESSONS)) {
+    if (only && !only.includes(id)) continue;
     for (const lang of ["en", "ar"]) {
       const lines = lang === "en" ? lesson.en : lesson.ar.vo;
       lines.forEach((text, i) => { speak(text, voices[lang][0], voices[lang][1], path.join(out, lang, `${id}_${i + 1}.m4a`)); n++; });

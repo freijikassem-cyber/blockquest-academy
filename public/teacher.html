@@ -29,19 +29,22 @@
 <!-- dashboard -->
 <div id="dash" class="wrap hidden">
   <div class="dash">
-    <div class="card">
-      <h3>My question banks</h3>
+    <div class="card no-print">
+      <h3>My classes</h3>
       <div id="banks"></div>
       <form id="newBank" style="margin-top:14px">
-        <div class="field"><label for="btitle">New bank title</label><input id="btitle" placeholder="e.g. Networks – Unit 3" required maxlength="120"></div>
-        <div class="field"><label for="bgrade">Grade</label><select id="bgrade"><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option value="">Other</option></select></div>
-        <button class="btn small">+ Create bank</button>
+        <div class="field"><label for="btitle">New class name</label><input id="btitle" placeholder="e.g. Grade 5 B" required maxlength="120"></div>
+        <div class="field"><label for="bgrade">Grade</label><select id="bgrade"><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option value="">Other</option></select></div>
+        <button class="btn small">+ Create class</button>
       </form>
     </div>
-    <div class="card" id="detail"><p class="muted">Create a question bank on the left, or pick one to open it.</p></div>
+    <div class="card" id="detail"><p class="muted">Create a class on the left, or pick one to open it.</p></div>
   </div>
 </div>
 <script src="/levels.js"></script>
+<script>window.I18N = { lang: "en", t: (k) => k };</script>
+<script src="/ai.js"></script>
+<script src="/teach.js"></script>
 <script src="/teacher.js"></script>
 <footer class="credit">Created by <b>Kassem Freiji</b></footer>
 </body>

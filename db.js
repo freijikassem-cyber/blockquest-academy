@@ -34,11 +34,19 @@ CREATE TABLE IF NOT EXISTS answers(
   id ${pk}, student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   chosen INTEGER NOT NULL, correct INTEGER NOT NULL, at TEXT DEFAULT NOW_TS);
+CREATE TABLE IF NOT EXISTS projects(
+  id ${pk}, student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  share TEXT NOT NULL UNIQUE, title TEXT NOT NULL, track TEXT NOT NULL,
+  world TEXT NOT NULL, code TEXT NOT NULL DEFAULT '', updated TEXT DEFAULT NOW_TS);
 CREATE TABLE IF NOT EXISTS attempts(
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   level_id TEXT NOT NULL, runs INTEGER NOT NULL DEFAULT 0, fails INTEGER NOT NULL DEFAULT 0, at TEXT DEFAULT NOW_TS,
   PRIMARY KEY(student_id, level_id));
 `;
+
+
+// columns added after the first release: [table, column, type]
+const ADDED = [["students", "pkey", "TEXT"], ["students", "pic", "TEXT"], ["banks", "locked", "TEXT DEFAULT '[]'"], ["attempts", "code", "TEXT"]];
 
 async function postgres(url) {
   const { default: pg } = await import("pg");
@@ -57,7 +65,7 @@ async function postgres(url) {
   };
   // DEFAULT expressions are fixed at table creation, so NOW is substituted there too
   await pool.query(SCHEMA("SERIAL PRIMARY KEY").replace(/NOW_TS/g, `(${NOW})`));
-  await pool.query("ALTER TABLE students ADD COLUMN IF NOT EXISTS pkey TEXT");
+  for (const [t, c, type] of ADDED) await pool.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS ${c} ${type}`);
   return db;
 }
 
@@ -71,7 +79,7 @@ async function sqlite(dir) {
   const db = { kind: "sqlite", all, run: async (s, ...p) => ({ rows: await all(s, ...p) }), get: async (s, ...p) => lite.prepare(sql(s)).get(...p) };
   lite.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
   lite.exec(SCHEMA("INTEGER PRIMARY KEY").replace(/NOW_TS/g, `(${NOW})`));
-  if (!lite.prepare("PRAGMA table_info(students)").all().some((c) => c.name === "pkey")) lite.exec("ALTER TABLE students ADD COLUMN pkey TEXT");
+  for (const [t, c, type] of ADDED) if (!lite.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c)) lite.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${type}`);
   return db;
 }
 

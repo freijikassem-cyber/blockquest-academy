@@ -14,6 +14,10 @@
     return data;
   }
 
+  const PICS = { dog: "🐶", cat: "🐱", lion: "🦁", frog: "🐸", monkey: "🐵", panda: "🐼", fox: "🦊", turtle: "🐢", octopus: "🐙", unicorn: "🦄", bee: "🐝", dolphin: "🐬" };
+  const ALL_TOOLS = ["forward", "turn", "mine", "place", "repeat", "until", "if"];
+  let project = null;     // My Projects: { id, share, title, world, code, track, view, author } while building or watching one
+  const trackNow = () => (project ? project.track : me.track);
   let me = null;          // play session from the server
   let levels = [];        // levels for my track
   let level = null, levelIndex = 0;
@@ -32,11 +36,13 @@
   function show(scr) {
     screen = scr;
     for (const s of ["join", "map", "game"]) $(s).classList.toggle("hidden", s !== screen);
-    const inside = screen !== "join";
+    const inside = screen !== "join" && !!me;
     for (const id of ["gems", "who", "leaveBtn", "progBtn"]) $(id).classList.toggle("hidden", !inside);
-    $("mapBtn").classList.toggle("hidden", screen !== "game");
+    $("mapBtn").classList.toggle("hidden", screen !== "game" || !me);
+    document.body.classList.toggle("sandbox", screen === "game" && !!project);
+    document.body.classList.toggle("viewing", !!project?.view);
     if (me) { $("gems").textContent = "💎 " + me.gems; $("who").textContent = me.name; }
-    $("crumb").textContent = screen === "game" && level ? `${T("level", { n: levelIndex + 1 })} · ${LV("title")}` : "";
+    $("crumb").textContent = screen === "game" && level ? (project ? project.title : `${T("level", { n: levelIndex + 1 })} · ${LV("title")}`) : "";
   }
 
   // ---------- join ----------
@@ -46,18 +52,35 @@
     el.addEventListener("click", pick);
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pick(); });
   });
-  async function join(code, name, trk) {
-    me = await api("/api/play/join", { code, name, track: trk });
-    store.set("bq_token", me.token); store.set("bq_code", code); store.set("bq_name", name);
+  async function join(code, name, trk, pic) {
+    const r = await api("/api/play/join", { code, name, track: trk, pic });
+    if (r.needPic) return askPic(r.needPic, code, name, trk);
+    me = r;
+    store.set("bq_token", me.token); store.set("bq_code", code); store.set("bq_name", name); if (pic) store.set("bq_pic", pic);
+    $("jpic").classList.add("hidden"); $("jform").classList.remove("hidden");
     enter();
   }
+  // secret picture: young students tap a picture instead of typing a password
+  function askPic(mode, code, name, trk) {
+    show("join");
+    $("jform").classList.add("hidden"); $("jpic").classList.remove("hidden");
+    $("picTitle").textContent = T(mode === "choose" ? "picChoose" : "picEnter");
+    $("picSub").textContent = mode === "choose" ? T("picChooseSub") : name;
+    $("perr").textContent = "";
+    $("pics").innerHTML = Object.entries(PICS).map(([k, e]) => `<button class="pic" data-k="${k}" aria-label="${esc(T("pic_" + k))}">${e}</button>`).join("");
+    $("pics").querySelectorAll(".pic").forEach((b) => b.addEventListener("click", async () => {
+      $("perr").textContent = "";
+      try { await join(code, name, trk, b.dataset.k); } catch (e) { $("perr").textContent = e.message; }
+    }));
+  }
+  $("picBack").addEventListener("click", () => { $("jpic").classList.add("hidden"); $("jform").classList.remove("hidden"); });
   $("jgo").addEventListener("click", async () => {
     $("jerr").textContent = "";
     try { await join($("jcode").value.trim().toUpperCase(), $("jname").value.trim(), track); }
     catch (e) { $("jerr").textContent = e.message; }
   });
   $("jname").addEventListener("keydown", (e) => { if (e.key === "Enter") $("jgo").click(); });
-  $("leaveBtn").addEventListener("click", () => { store.del("bq_token"); me = null; stopRun(); showJoin(); });
+  $("leaveBtn").addEventListener("click", () => { store.del("bq_token"); store.del("bq_pic"); me = null; project = null; stopRun(); showJoin(); });
   $("progBtn").addEventListener("click", () => { location.href = "/progress#" + me.pkey; });
   $("watch").addEventListener("click", () => playIntro());
   I18N.onChange(() => {
@@ -65,9 +88,9 @@
     if (screen === "map") showMap();
     else if (screen === "game") { show("game"); intro(); setWorkTitle(); updateCounter(); }
   });
-  $("mapBtn").addEventListener("click", () => { stopRun(); showMap(); });
+  $("mapBtn").addEventListener("click", () => { stopRun(); project = null; showMap(); });
   $("switchBtn").addEventListener("click", async () => {
-    try { await join(store.get("bq_code"), me.name, me.track === "blocks" ? "python" : "blocks"); } catch (e) { alert(e.message); }
+    try { await join(store.get("bq_code"), me.name, me.track === "blocks" ? "python" : "blocks", store.get("bq_pic") || undefined); } catch (e) { alert(e.message); }
   });
   function showJoin() {
     const p = new URLSearchParams(location.search);
@@ -80,48 +103,158 @@
   // ---------- level map ----------
   function starsHtml(n) { return "★".repeat(n) + "<i>" + "★".repeat(3 - n) + "</i>"; }
   function showMap() {
+    project = null;
     $("mapTitle").textContent = T(me.track === "blocks" ? "mapBlocks" : "mapPython");
     const doneCount = levels.filter((l) => me.progress[l.id]).length;
     $("mapDone").textContent = T("done", { a: doneCount, b: levels.length });
     $("mapBar").style.width = Math.round((doneCount / levels.length) * 100) + "%";
     $("mapSub").textContent = `${me.bankTitle}${me.teacher ? " · " + me.teacher : ""}`;
     $("switchBtn").textContent = T(me.track === "blocks" ? "toPython" : "toBlocks");
-    let open = true;
-    $("levels").innerHTML = levels.map((l, i) => {
-      const stars = me.progress[l.id] || 0, enabled = open;
-      if (!stars) open = false;
-      return `<button class="level" data-i="${i}" ${enabled ? "" : "disabled"}><div class="num">${i + 1}</div><b>${esc(LV("title", l))}</b><div class="stars">${enabled ? starsHtml(stars) : "🔒"}</div></button>`;
+    const locked = new Set(me.locked || []);
+    // each stage (grade band) unlocks on its own; the teacher can also hold levels closed
+    let html = window.STAGES.filter((st) => st.track === me.track).map((st) => {
+      const list = levels.filter((l) => l.stage === st.n);
+      const done = list.filter((l) => me.progress[l.id]).length;
+      let open = true;
+      const cards = list.map((l) => {
+        const i = levels.indexOf(l), stars = me.progress[l.id] || 0, held = locked.has(l.id) && !stars, enabled = open && !held;
+        if (!stars) open = false;
+        return `<button class="level" data-i="${i}" ${enabled ? "" : "disabled"} ${held ? `title="${esc(T("lockedByTeacher"))}"` : ""}><div class="num">${i + 1}</div><b>${esc(LV("title", l))}</b><div class="stars">${enabled ? starsHtml(stars) : held ? "🔐" : "🔒"}</div></button>`;
+      }).join("");
+      return `<div class="stage-head"><h2>${esc(T("stage", { n: st.n, g: st.grades }))}</h2><span class="chip" dir="ltr">${done} / ${list.length}</span><span class="spacer"></span>${done === list.length ? `<a class="btn small" href="/certificate#${me.pkey}/${st.n}">${esc(T("cert"))}</a>` : ""}</div><div class="levels">${cards}</div>`;
     }).join("");
-    $("levels").querySelectorAll(".level").forEach((b) => b.addEventListener("click", () => openLevel(Number(b.dataset.i))));
+    // AI Lab
+    const ai = window.AI_LEVELS || [], aiDone = ai.filter((a) => me.progress[a.id]).length;
+    let aiOpen = true;
+    html += `<div class="stage-head"><h2>🤖 ${esc(T("stageAI"))}</h2><span class="chip" dir="ltr">${aiDone} / ${ai.length}</span><span class="spacer"></span>${ai.length && aiDone === ai.length ? `<a class="btn small" href="/certificate#${me.pkey}/ai">${esc(T("cert"))}</a>` : ""}</div>
+      <p class="muted" style="margin:-6px 0 10px">${esc(T("aiSub"))}</p><div class="levels">${ai.map((a, i) => {
+        const stars = me.progress[a.id] || 0, held = locked.has(a.id) && !stars, enabled = aiOpen && !held;
+        if (!stars) aiOpen = false;
+        return `<button class="level ai" data-ai="${i}" ${enabled ? "" : "disabled"}><div class="num">AI ${i + 1}</div><b>${esc(BQ.AI.title(a))}</b><div class="stars">${enabled ? starsHtml(stars) : held ? "🔐" : "🔒"}</div></button>`;
+      }).join("")}</div>`;
+    // My Projects
+    html += `<div class="stage-head"><h2>🛠️ ${esc(T("projTitle"))}</h2><span class="spacer"></span><button class="btn small teal" id="projNew">${esc(T("projNew"))}</button></div>
+      <p class="muted" style="margin:-6px 0 10px">${esc(T("projSub"))}</p><div id="projList" class="levels"></div>`;
+    $("levels").innerHTML = html;
+    $("levels").querySelectorAll(".level[data-i]").forEach((b) => b.addEventListener("click", () => openLevel(Number(b.dataset.i))));
+    $("levels").querySelectorAll(".level[data-ai]").forEach((b) => b.addEventListener("click", () => openAI(Number(b.dataset.ai))));
+    $("projNew").addEventListener("click", () => openProject(null));
+    loadProjects();
     show("map");
+  }
+  function openAI(i) {
+    BQ.AI.open(window.AI_LEVELS[i], i, async (stars) => {
+      const a = window.AI_LEVELS[i];
+      try { const r = await api("/api/play/progress", { token: me.token, levelId: a.id, stars }); me.gems = r.gems; $("gems").textContent = "💎 " + me.gems; } catch {}
+      me.progress[a.id] = Math.max(me.progress[a.id] || 0, stars);
+    }, () => showMap());
+  }
+  async function loadProjects() {
+    let list = [];
+    try { list = await api("/api/play/projects?token=" + me.token); } catch {}
+    if (screen !== "map" || !$("projList")) return;
+    $("projList").innerHTML = list.length ? list.map((p) => `<div class="level proj"><b>${esc(p.title)}</b><div class="muted" dir="ltr">${esc((p.updated || "").slice(0, 10))}</div>
+        <div class="row" style="gap:6px;margin-top:8px"><button class="btn small" data-open="${p.id}">${esc(T("projOpen"))}</button><button class="btn ghost small" data-del="${p.id}">${esc(T("projDelete"))}</button></div></div>`).join("")
+      : `<p class="muted">${esc(T("projEmpty"))}</p>`;
+    $("projList").querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", async () => {
+      const p = list.find((x) => x.id === Number(b.dataset.open));
+      try { const full = await api("/api/projects/" + p.share); openProject({ ...full, id: p.id, share: p.share }); } catch (e) { alert(e.message); }
+    }));
+    $("projList").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+      if (!confirm(T("projDeleteConfirm"))) return;
+      try { await fetch(`/api/play/projects/${b.dataset.del}?token=${me.token}`, { method: "DELETE" }); } catch {}
+      loadProjects();
+    }));
   }
 
   // ---------- level ----------
   const BLOCK_FOR = { forward: "hero_forward", turn: "hero_turn", mine: "hero_mine", place: "hero_place", repeat: "hero_repeat", until: "hero_until", if: "hero_if" };
-  const saveKey = () => `bq_code_${me.token.slice(0, 12)}_${level.id}`;
+  const saveKey = () => (project ? `bq_proj_${project.id || "new"}` : `bq_code_${me.token.slice(0, 12)}_${level.id}`);
   function say(html, mood) { const b = $("bubble"); b.className = "bubble" + (mood ? " " + mood : ""); b.innerHTML = html; }
   const goalLine = () => `<div class="goal">🎯 ${esc(T("goal"))}: ${esc(goalText())}</div>`;
-  function intro() { say(`${esc(LV("story"))}${goalLine()}`); }
-  function setWorkTitle() { $("workTitle").textContent = T(me.track === "blocks" ? "workBlocks" : "workPython"); }
+  function intro() {
+    if (project) return say(esc(project.view ? T("projView", { a: project.author || "" }) : T("projIntro")));
+    say(`${esc(LV("story"))}${goalLine()}`);
+  }
+  function setWorkTitle() { $("workTitle").textContent = T(trackNow() === "blocks" ? "workBlocks" : "workPython"); }
   function playIntro() { stopRun(); return BQ.Intro.play(level, levelIndex, me.track, goalText()); }
 
   function openLevel(i) {
     stopRun();
-    levelIndex = i; level = levels[i]; hintShown = false; fails = 0;
+    if (i >= 0) { project = null; levelIndex = i; level = levels[i]; }
+    hintShown = false; fails = 0;
     show("game");
     renderer ??= new BQ.Renderer($("canvas"));
     renderer.onInv = drawInv;
     renderer.load(level);
     intro();
     $("out").textContent = "";
-    const blocks = me.track === "blocks";
+    const blocks = trackNow() === "blocks";
     $("blockly").classList.toggle("hidden", !blocks);
     $("python").classList.toggle("hidden", blocks);
     setWorkTitle();
     if (blocks) setupBlocks(); else setupPython();
     updateCounter();
+    if (project) { paintPalette(); return; }
     if (!me.progress[level.id]) playIntro();
   }
+
+  // ---------- My Projects: build a world, program Bolt, share it ----------
+  const TILES = [[".", "🟩", "grass"], [",", "🟨", "sand"], ["~", "🟦", "water"], ["^", "🟥", "lava"], ["T", "🌳", "tree"], ["R", "🪨", "rock"], ["O", "💎", "ore"], ["*", "💠", "gem"], ["F", "🚩", "flag"]];
+  let brush = "T";
+  function openProject(p) {
+    const blank = { grid: ["........", "........", "........", "........", "........", "........", "........", "........"], start: [1, 3, "E"] };
+    const track = p?.track || me.track;
+    project = { id: p?.id || null, share: p?.share || null, title: p?.title || T("projDefault"), world: p?.world || blank, code: p?.code ?? null, track, view: !!p?.view, author: p?.author };
+    level = { id: "proj", stage: 0, title: project.title, par: 0, story: "", hint: "", grid: [...project.world.grid], start: [...project.world.start], goal: {}, tools: ALL_TOOLS,
+      starter: "# Program Bolt in your world\nhero.move()\n" };
+    levelIndex = 0;
+    openLevel(-1);
+  }
+  function paintPalette() {
+    $("palette").innerHTML = project.view ? "" : `<div class="row" style="gap:6px;margin-bottom:6px"><input id="ptitle" maxlength="60" value="${esc(project.title)}" aria-label="${esc(T("projName"))}" style="flex:1;min-width:140px">
+        <button id="psave" class="btn small">${esc(T("projSave"))}</button><button id="pshare" class="btn ghost small">${esc(T("projShare"))}</button></div>
+      <div class="tiles"><span class="muted">${esc(T("projPaint"))}:</span>${TILES.map(([c, e, n]) => `<button class="tile ${brush === c ? "on" : ""}" data-c="${esc(c)}" title="${esc(T("t_" + n))}">${e}</button>`).join("")}
+        <button class="tile ${brush === "bolt" ? "on" : ""}" data-c="bolt" title="${esc(T("projBoltTip"))}">🤖</button></div>`;
+    if (project.view) return;
+    $("palette").querySelectorAll(".tile").forEach((b) => b.addEventListener("click", () => { brush = b.dataset.c; paintPalette(); }));
+    $("psave").addEventListener("click", saveProject);
+    $("pshare").addEventListener("click", async () => {
+      if (!project.share) await saveProject();
+      if (!project.share) return;
+      const link = location.origin + "/play?project=" + project.share;
+      try { await navigator.clipboard.writeText(link); say(esc(T("projCopied")) + `<div class="goal" dir="ltr">${esc(link)}</div>`, "good"); } catch { prompt("", link); }
+    });
+  }
+  async function saveProject() {
+    project.title = ($("ptitle")?.value || "").trim() || T("projDefault");
+    const code = trackNow() === "blocks" ? JSON.stringify(Blockly.serialization.workspaces.save(workspace)) : $("code").value;
+    try {
+      const r = await api("/api/play/projects", { token: me.token, id: project.id || undefined, title: project.title, world: { grid: level.grid, start: level.start }, code });
+      const firstSave = !project.id;
+      project.id = r.id; project.share = r.share; project.code = code;
+      if (firstSave) store.del("bq_proj_new");
+      show("game"); say(esc(T("projSaved")), "good");
+    } catch (e) { say(esc(e.message), "bad"); }
+  }
+  // tap the map to paint the chosen tile (or place / turn Bolt)
+  $("canvas").addEventListener("click", (e) => {
+    if (!project || project.view || running) return;
+    const r = $("canvas").getBoundingClientRect();
+    const x = Math.floor(((e.clientX - r.left) / r.width) * 8), y = Math.floor(((e.clientY - r.top) / r.height) * 8);
+    if (x < 0 || y < 0 || x > 7 || y > 7) return;
+    const g = level.grid.map((row) => row.split(""));
+    if (brush === "bolt") {
+      if (level.start[0] === x && level.start[1] === y) level.start[2] = "NESW"[("NESW".indexOf(level.start[2]) + 1) % 4];
+      else { level.start = [x, y, level.start[2]]; if (g[y][x] !== "." && g[y][x] !== ",") g[y][x] = "."; }
+    } else {
+      if (level.start[0] === x && level.start[1] === y && !".,".includes(brush)) return;
+      if (brush === "F") g.forEach((row) => row.forEach((c, i) => { if (c === "F") row[i] = "."; }));
+      g[y][x] = brush;
+    }
+    level.grid = g.map((row) => row.join(""));
+    renderer.load(level);
+  });
   function drawInv(inv) {
     const need = level.goal.collect || {};
     const icon = { wood: "🪵", stone: "🪨", gem: "💠" };
@@ -158,24 +291,37 @@
   function setupBlocks() {
     defineBlocks();
     if (workspace) workspace.dispose();
+    const view = !!project?.view;
     workspace = Blockly.inject("blockly", {
-      toolbox: { kind: "flyoutToolbox", contents: level.tools.map((t) => ({ kind: "block", type: BLOCK_FOR[t] })) },
-      renderer: "zelos", trashcan: true, scrollbars: true,
+      ...(view ? { readOnly: true } : { toolbox: { kind: "flyoutToolbox", contents: level.tools.map((t) => ({ kind: "block", type: BLOCK_FOR[t] })) } }),
+      renderer: "zelos", trashcan: !view, scrollbars: true,
       zoom: { controls: true, wheel: false, startScale: 0.85, maxScale: 1.4, minScale: 0.5 },
     });
     let saved = null;
-    try { saved = JSON.parse(store.get(saveKey())); } catch {}
+    const local = project && !project.view ? store.get(saveKey()) : null;
+    try { saved = JSON.parse(local ?? (project ? project.code : store.get(saveKey()))); } catch {}
     try { if (saved) Blockly.serialization.workspaces.load(saved, workspace); } catch { workspace.clear(); }
     if (!startBlock()) { workspace.clear(); const b = workspace.newBlock("when_run"); b.initSvg(); b.render(); b.moveBy(30, 30); }
     startBlock().setDeletable(false);
+    if (project?.view) { Blockly.svgResize(workspace); return; }
     Blockly.svgResize(workspace);
     workspace.addChangeListener((e) => {
       if (e.isUiEvent) return;
-      store.set(saveKey(), JSON.stringify(Blockly.serialization.workspaces.save(workspace)));
+      if (!project?.view) store.set(saveKey(), JSON.stringify(Blockly.serialization.workspaces.save(workspace)));
       updateCounter();
     });
   }
   const blockCount = () => startBlock().getDescendants(false).length - 1;
+  // the blocks as readable text, so the teacher can see what the student built
+  function blocksText() {
+    const label = (b) => ({ when_run: "when run", hero_forward: "move forward", hero_mine: "mine", hero_until: "repeat until flag" }[b.type]
+      || (b.type === "hero_turn" ? "turn " + b.getFieldValue("DIR") : b.type === "hero_place" ? "place " + b.getFieldValue("WHAT")
+        : b.type === "hero_repeat" ? `repeat ${b.getFieldValue("TIMES")} times` : b.type === "hero_if" ? `if ${b.getFieldValue("WHAT")} ahead` : b.type));
+    const out = [];
+    const walk = (b, d) => { for (; b; b = b.getNextBlock()) { out.push("  ".repeat(d) + label(b)); const inner = b.getInputTargetBlock("DO"); if (inner) walk(inner, d + 1); } };
+    walk(startBlock(), 0);
+    return out.join("\n");
+  }
 
   // ---------- python ----------
   const PRELUDE = [
@@ -195,7 +341,9 @@
   ];
   function setupPython() {
     const ta = $("code");
-    ta.value = store.get(saveKey()) ?? level.starter;
+    const local = project && !project.view ? store.get(saveKey()) : null; // unsaved edits on this device win
+    ta.value = local ?? (project ? project.code : store.get(saveKey())) ?? level.starter;
+    ta.readOnly = !!project?.view;
     syncGutter();
   }
   function syncGutter() {
@@ -203,7 +351,7 @@
     $("gutter").textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n");
     $("gutter").style.marginTop = -$("code").scrollTop + "px";
   }
-  $("code").addEventListener("input", () => { store.set(saveKey(), $("code").value); syncGutter(); updateCounter(); });
+  $("code").addEventListener("input", () => { if (!project?.view) store.set(saveKey(), $("code").value); syncGutter(); updateCounter(); });
   $("code").addEventListener("scroll", syncGutter);
   $("code").addEventListener("keydown", (e) => {
     const ta = e.target, s = ta.selectionStart, v = ta.value;
@@ -221,6 +369,7 @@
 
   function updateCounter() {
     if (!level) return;
+    if (project) { $("counter").textContent = ""; return; }
     const n = me.track === "blocks" ? blockCount() : lineCount();
     $("counter").textContent = T(me.track === "blocks" ? "counterBlocks" : "counterLines", { n, p: level.par });
   }
@@ -228,7 +377,7 @@
     if (!confirm(T("clearConfirm"))) return;
     store.del(saveKey());
     stopRun();
-    if (me.track === "blocks") setupBlocks(); else setupPython();
+    if (trackNow() === "blocks") setupBlocks(); else setupPython();
     updateCounter();
   });
 
@@ -236,7 +385,7 @@
   function stopRun() {
     running = false;
     if (renderer && level) { renderer.load(level); }
-    if (workspace) workspace.highlightBlock(null);
+    if (workspace && !workspace.isDisposed?.()) workspace.highlightBlock(null);
     $("run").disabled = false;
   }
   $("reset").addEventListener("click", () => { stopRun(); intro(); $("out").textContent = ""; });
@@ -280,8 +429,8 @@
   // explain what went wrong in this run, from the recorded events
   function diagnose(world, result, problem) {
     const ev = world.events, parts = [];
-    const canPlace = me.track === "python" || level.tools.includes("place");
-    const canMine = me.track === "python" || level.tools.includes("mine");
+    const canPlace = trackNow() === "python" || level.tools.includes("place");
+    const canMine = trackNow() === "python" || level.tools.includes("mine");
     if (problem) parts.push(problem);
     else if (world.dead) {
       const fail = ev.find((e) => e.t === "fail");
@@ -319,7 +468,7 @@
     const world = new BQ.World(level);
     let problem = null;
     try {
-      if (me.track === "blocks") {
+      if (trackNow() === "blocks") {
         if (blockCount() === 0) throw new BQ.GameError(T("noBlocks"));
         runBlocks(world);
       } else await runPython(world);
@@ -327,16 +476,22 @@
       const native = err?.nativeError || err;
       if (native instanceof BQ.Stop) { /* hero fell — the events show it */ }
       else if (native instanceof BQ.GameError) problem = /300 actions/.test(native.message) ? T("battery") : native.message;
-      else if (me.track === "python") { const raw = pythonError(err); $("out").textContent += raw; problem = friendlyPython(raw); }
+      else if (trackNow() === "python") { const raw = pythonError(err); $("out").textContent += raw; problem = friendlyPython(raw); }
       else problem = "Something is wrong with these blocks: " + (err?.message || err);
     }
     const token = renderer.token;
-    const finished = await renderer.play(world.events, (ev) => { if (workspace && me.track === "blocks") workspace.highlightBlock(ev.block); });
+    const finished = await renderer.play(world.events, (ev) => { if (workspace && trackNow() === "blocks") workspace.highlightBlock(ev.block); });
     if (!finished || token !== renderer.token || !running) return;
     if (workspace) workspace.highlightBlock(null);
     const result = world.result();
     const ok = !problem && !world.dead && result.done;
-    api("/api/play/attempt", { token: me.token, levelId: level.id, ok }).catch(() => {});
+    if (project) {
+      say(ok ? esc(T("projFinished")) : diagnose(world, result, problem), ok ? "good" : "bad");
+      running = false; $("run").disabled = false;
+      return;
+    }
+    const code = me.track === "blocks" ? blocksText() : $("code").value;
+    api("/api/play/attempt", { token: me.token, levelId: level.id, ok, code }).catch(() => {});
     if (ok) return win();
     fails++;
     say(diagnose(world, result, problem), "bad");
@@ -373,6 +528,11 @@
   // ---------- boot ----------
   (async () => {
     const token = store.get("bq_token");
+    const share = new URLSearchParams(location.search).get("project");
+    if (share) {
+      try { const p = await api("/api/projects/" + encodeURIComponent(share)); return openProject({ ...p, view: true }); }
+      catch { showJoin(); return say(esc(T("projNotFound")), "bad"); }
+    }
     const urlCode = new URLSearchParams(location.search).get("code");
     if (token && (!urlCode || urlCode.toUpperCase() === store.get("bq_code"))) {
       try { me = await api("/api/play/state?token=" + token); return enter(); } catch { store.del("bq_token"); }

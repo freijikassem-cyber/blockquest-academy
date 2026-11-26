@@ -183,3 +183,56 @@ body.ar .ref span, body.ar .ref h3 { display: block; direction: rtl; text-align:
 body.ar .i-head { text-align: left; }
 body.ar .work-head { direction: rtl; }
 .stat b { direction: ltr; unicode-bidi: isolate; }
+
+/* ---------- stages, picture passwords, My Projects ---------- */
+.stage-head { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; flex-wrap: wrap; }
+.stage-head h2 { margin: 0; font-size: 20px; }
+.pics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 420px; margin: 16px auto; }
+.pic { font-size: 44px; line-height: 1; padding: 14px 0; border-radius: 14px; border: 2px solid var(--line, #33406a); background: rgba(255,255,255,.04); cursor: pointer; }
+.pic:hover, .pic:focus-visible { border-color: var(--yellow, #ffd34d); transform: translateY(-2px); }
+.level.proj { cursor: default; text-align: start; }
+#palette:empty { display: none; }
+#palette { margin-bottom: 8px; }
+.tiles { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tile { font-size: 20px; width: 38px; height: 38px; border-radius: 9px; border: 2px solid transparent; background: rgba(255,255,255,.06); cursor: pointer; }
+.tile.on { border-color: var(--yellow, #ffd34d); background: rgba(255,211,77,.15); }
+body.sandbox #hint, body.sandbox #watch, body.sandbox #counter { display: none; }
+body.sandbox:not(.viewing) #canvas { cursor: crosshair; }
+body.viewing #clear { display: none; }
+.level.ai .num { font-size: 15px; }
+@media print { .topbar, .credit, .no-print { display: none !important; } body { background: #fff; color: #000; } }
+
+/* ---------- AI Lab ---------- */
+.ai-lab { position: fixed; inset: 0; z-index: 60; background: rgba(8, 12, 26, .82); overflow-y: auto; padding: 24px 16px; }
+.ai-box { max-width: 880px; margin: 0 auto; }
+.ai-baskets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ai-basket { border: 2px dashed var(--line); border-radius: 14px; padding: 10px; min-height: 90px; }
+.ai-bh { font-weight: 800; margin-bottom: 6px; }
+.ai-items, .ai-pool, .ai-tests { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-card { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; font-size: 34px; border-radius: 12px; background: rgba(255,255,255,.07); }
+.ai-items .ai-card { cursor: pointer; }
+.ai-items .ai-card:hover { outline: 2px solid var(--pink); }
+.ai-pick { text-align: center; } .ai-pick .btn { padding: 6px 8px; font-size: 16px; margin: 4px 2px 0; }
+.ai-test { text-align: center; padding: 6px; border-radius: 12px; border: 2px solid transparent; }
+.ai-test.ok { border-color: var(--green); } .ai-test.bad { border-color: var(--pink); }
+.ai-guess { font-weight: 800; margin-top: 4px; }
+@media (max-width: 560px) { .ai-baskets { grid-template-columns: 1fr; } }
+
+/* ---------- certificate ---------- */
+.cert-page { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+.cert { background: #fffdf5; color: #1d2340; border-radius: 18px; padding: 48px 40px; text-align: center; border: 10px double #d9a72b; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.cert h1 { font-size: 30px; color: #b07d0a; margin: 4px 0 18px; }
+.cert .who { font-size: 34px; font-weight: 800; margin: 10px 0; border-bottom: 2px solid #d9a72b; display: inline-block; padding: 0 24px 6px; }
+.cert .stars { font-size: 28px; color: #e0a400; margin: 10px 0; }
+.cert .meta { display: flex; justify-content: space-around; gap: 12px; margin-top: 36px; flex-wrap: wrap; font-size: 14px; }
+.cert .meta b { display: block; font-size: 16px; }
+.cert .bolt { font-size: 52px; }
+@media print { .cert { box-shadow: none; } .cert-page { margin: 0; } @page { size: landscape; margin: 12mm; } }
+.ai-box .bubble:empty { display: none; }
+.levels > p { grid-column: 1 / -1; }
+.stage-head h2 { font-size: 15px; }
+.codebox { background: #0d1222; padding: 10px; border-radius: 8px; white-space: pre; overflow-x: auto; font-size: 13px; margin: 6px 0 0; max-width: 360px; }
+details.lesson { border-top: 1px solid var(--line); padding: 8px 0; }
+details.lesson summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lesson-body { padding: 6px 0 4px 28px; } .lesson-body p { margin: 6px 0; }
+@media print { #side, .tabs, .modal { display: none !important; } .card { background: #fff !important; color: #000; box-shadow: none; } details.lesson { break-inside: avoid; } }

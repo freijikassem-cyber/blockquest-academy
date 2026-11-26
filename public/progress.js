@@ -12,25 +12,33 @@
     if (!data) return;
     const pct = data.answered ? Math.round((data.correct / data.answered) * 100) : null;
     let done = 0, total = 0, starSum = 0, gems = 0;
-    const sections = ["blocks", "python"].map((track) => {
-      const list = window.LEVELS[track], tr = data.tracks[track];
-      total += list.length;
-      if (!tr) return `<div class="card" style="margin-top:14px"><h3>${esc(T(track === "blocks" ? "pTrackBlocks" : "pTrackPython"))}</h3><p class="muted" style="margin:0">${esc(T("pNotStarted"))}</p></div>`;
-      gems = Math.max(gems, 0) + tr.gems;
-      const n = list.filter((l) => tr.levels[l.id]?.stars).length;
-      done += n;
-      const cells = list.map((l, i) => {
-        const p = tr.levels[l.id] || { stars: 0, runs: 0, fails: 0 };
-        starSum += p.stars;
-        const stuck = !p.stars && p.fails >= 5;
-        return `<div class="plevel ${p.stars ? "done" : stuck ? "stuck" : ""}" ${stuck ? `title="${esc(T("pNeedsHelp"))}"` : ""}>
-          <b>${i + 1}. ${esc(I18N.lv(l, "title"))}</b>
+    const levelCell = (l, i, p) => {
+      starSum += p.stars;
+      const stuck = !p.stars && p.fails >= 5;
+      return `<div class="plevel ${p.stars ? "done" : stuck ? "stuck" : ""}" ${stuck ? `title="${esc(T("pNeedsHelp"))}"` : ""}>
+          <b>${i + 1}. ${esc(l.ai ? BQ.AI.title(l) : I18N.lv(l, "title"))}</b>
           <div class="stars">${p.stars ? stars(p.stars) : `<span class="muted">${esc(p.runs ? "…" : T("pNever"))}</span>`}</div>
           <div class="muted">${p.runs ? esc(T("pTry", { n: p.runs })) : ""}${stuck ? " ⚠️" : ""}</div></div>`;
-      }).join("");
-      return `<div class="card" style="margin-top:14px"><h3>${esc(T(track === "blocks" ? "pTrackBlocks" : "pTrackPython"))} · <span dir="ltr">${n} / ${list.length}</span></h3>
-        <div class="pbar"><b style="width:${Math.round((n / list.length) * 100)}%"></b></div><div class="plevels">${cells}</div></div>`;
+    };
+    const section = (title, list, get, certId, started) => {
+      total += list.length;
+      if (!started) return `<div class="card" style="margin-top:14px"><h3>${esc(title)}</h3><p class="muted" style="margin:0">${esc(T("pNotStarted"))}</p></div>`;
+      const n = list.filter((l) => get(l).stars).length;
+      done += n;
+      return `<div class="card" style="margin-top:14px"><div class="row"><h3 style="margin:0">${esc(title)} · <span dir="ltr">${n} / ${list.length}</span></h3><span class="spacer"></span>${n === list.length ? `<a class="btn small" href="/certificate#${key}/${certId}">${esc(T("cert"))}</a>` : ""}</div>
+        <div class="pbar"><b style="width:${Math.round((n / list.length) * 100)}%"></b></div><div class="plevels">${list.map((l, i) => levelCell(l, i, get(l))).join("")}</div></div>`;
+    };
+    const blank = { stars: 0, runs: 0, fails: 0 };
+    let sections = window.STAGES.map((st) => {
+      const tr = data.tracks[st.track];
+      if (tr) gems = Math.max(gems, 0) + (st === window.STAGES.find((x) => x.track === st.track) ? tr.gems : 0);
+      const list = window.LEVELS[st.track].filter((l) => l.stage === st.n);
+      return section(T("pStage", { n: st.n, g: st.grades }) + " · " + T(st.track === "blocks" ? "pTrackBlocks" : "pTrackPython"), list, (l) => tr?.levels[l.id] || blank, st.n, !!tr && list.some((l) => tr.levels[l.id]));
     }).join("");
+    // AI Lab results can be saved on either track record: take the best
+    const aiBest = (l) => Object.values(data.tracks).map((tr) => tr.levels[l.id]).filter(Boolean).sort((a, b) => (b.stars || 0) - (a.stars || 0))[0] || blank;
+    const aiList = (window.AI_LEVELS || []).map((a) => ({ ...a, ai: true }));
+    sections += section("🤖 " + T("pTrackAI"), aiList, aiBest, "ai", aiList.some((l) => aiBest(l).stars || aiBest(l).runs));
     const link = location.origin + "/progress#" + key;
     $("report").innerHTML = `
       <div class="card">
@@ -39,7 +47,6 @@
         <div class="stats">
           <div class="stat"><b>${done} / ${total}</b>${esc(T("pLevels"))}</div>
           <div class="stat"><b>${starSum} ★</b>${esc(T("pStars"))}</div>
-          <div class="stat"><b>${pct === null ? "–" : pct + "%"}</b>${esc(T("pQuiz"))}${data.answered ? ` (${data.correct}/${data.answered})` : ""}</div>
           <div class="stat"><b>💎 ${gems}</b>${esc(T("pGems"))}</div>
         </div>
         ${isStudent() ? "" : `<div class="muted">${esc(T("pParentNote"))}</div>`}

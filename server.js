@@ -12,6 +12,10 @@ console.log("database:", db.kind);
 const get = db.get, all = db.all, run = db.run;
 
 const PKEY_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+// picture passwords for young students (the same list is in public/game.js)
+const PICS = ["dog", "cat", "lion", "frog", "monkey", "panda", "fox", "turtle", "octopus", "unicorn", "bee", "dolphin"];
+const LEVEL_ID = /^[bpa]\d{1,3}$/;
+function parseList(v) { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a.filter((x) => LEVEL_ID.test(x)) : []; } catch { return []; } }
 function newPkey() {
   let c = "";
   for (let i = 0; i < 10; i++) c += PKEY_CHARS[crypto.randomInt(PKEY_CHARS.length)];
@@ -127,7 +131,8 @@ app.put("/api/banks/:id", auth, async (req, res) => {
   const title = String(req.body.title ?? bank.title).trim().slice(0, 120) || bank.title;
   const grade = String(req.body.grade ?? bank.grade).slice(0, 30);
   const shared = req.body.shared === undefined ? bank.shared : req.body.shared ? 1 : 0;
-  await run("UPDATE banks SET title=?, grade=?, shared=? WHERE id=?", title, grade, shared, bank.id);
+  const locked = Array.isArray(req.body.locked) ? JSON.stringify(parseList(JSON.stringify(req.body.locked))) : bank.locked;
+  await run("UPDATE banks SET title=?, grade=?, shared=?, locked=? WHERE id=?", title, grade, shared, locked, bank.id);
   res.json(await get("SELECT * FROM banks WHERE id=?", bank.id));
 });
 app.delete("/api/banks/:id", auth, async (req, res) => {
@@ -253,9 +258,9 @@ app.post("/api/generate", auth, async (req, res) => {
 app.get("/api/banks/:id/report", auth, async (req, res) => {
   const bank = await ownBank(req, res); if (!bank) return;
   for (const st of await all("SELECT * FROM students WHERE bank_id=? AND pkey IS NULL", bank.id)) await pkeyFor(st);
-  const students = await all(`SELECT s.id, s.name, s.track, s.gems, s.last_seen, s.pkey,
-      (SELECT COUNT(*) FROM progress WHERE student_id=s.id) AS levels_done,
-      (SELECT COALESCE(SUM(stars),0) FROM progress WHERE student_id=s.id) AS stars,
+  const students = await all(`SELECT s.id, s.name, s.track, s.gems, s.last_seen, s.pkey, s.pic,
+      (SELECT COUNT(*) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%') AS levels_done,
+      (SELECT COALESCE(SUM(stars),0) FROM progress WHERE student_id=s.id AND level_id NOT LIKE 'a%') AS stars,
       (SELECT COUNT(*) FROM answers WHERE student_id=s.id) AS answered,
       (SELECT COALESCE(SUM(correct),0) FROM answers WHERE student_id=s.id) AS correct
     FROM students s WHERE s.bank_id=? ORDER BY lower(s.name), s.track`, bank.id);
@@ -264,6 +269,25 @@ app.get("/api/banks/:id/report", auth, async (req, res) => {
       (SELECT COALESCE(SUM(correct),0) FROM answers WHERE question_id=q.id) AS correct
     FROM questions q WHERE q.bank_id=? ORDER BY q.id`, bank.id);
   res.json({ bank, students, questions });
+});
+async function ownStudent(req, res) {
+  const row = await get("SELECT s.* FROM students s JOIN banks b ON b.id=s.bank_id WHERE s.id=? AND b.teacher_id=?", Number(req.params.sid), req.teacher.id);
+  if (!row) res.status(404).json({ error: "Student not found." });
+  return row;
+}
+// everything about one student for the teacher: levels with stars, runs and their latest code, and their projects
+app.get("/api/students/:sid", auth, async (req, res) => {
+  const s = await ownStudent(req, res); if (!s) return;
+  const levels = {};
+  for (const r of await all("SELECT level_id, stars, at FROM progress WHERE student_id=?", s.id)) levels[r.level_id] = { stars: r.stars, at: r.at };
+  for (const r of await all("SELECT level_id, runs, fails, code, at FROM attempts WHERE student_id=?", s.id)) levels[r.level_id] = { stars: 0, ...levels[r.level_id], runs: r.runs, fails: r.fails, code: r.code, lastRun: r.at };
+  const projects = await all("SELECT title, share, track, updated FROM projects WHERE student_id=? ORDER BY updated DESC", s.id);
+  res.json({ id: s.id, name: s.name, track: s.track, gems: s.gems, pic: s.pic, pkey: s.pkey, levels, projects });
+});
+app.post("/api/students/:sid/reset-picture", auth, async (req, res) => {
+  const s = await ownStudent(req, res); if (!s) return;
+  await run("UPDATE students SET pic=NULL WHERE bank_id=? AND lower(name)=lower(?)", s.bank_id, s.name);
+  res.json({ ok: true });
 });
 app.delete("/api/students/:sid", auth, async (req, res) => {
   const row = await get("SELECT s.id FROM students s JOIN banks b ON b.id=s.bank_id WHERE s.id=? AND b.teacher_id=?", Number(req.params.sid), req.teacher.id);
@@ -280,10 +304,10 @@ async function student(req, res) {
   return s;
 }
 async function playState(s) {
-  const bank = await get("SELECT title, grade FROM banks WHERE id=?", s.bank_id);
+  const bank = await get("SELECT title, grade, locked FROM banks WHERE id=?", s.bank_id);
   const teacher = await get("SELECT t.name FROM teachers t JOIN banks b ON b.teacher_id=t.id WHERE b.id=?", s.bank_id);
   const progress = Object.fromEntries((await all("SELECT level_id, stars FROM progress WHERE student_id=?", s.id)).map((r) => [r.level_id, r.stars]));
-  return { token: s.token, pkey: await pkeyFor(s), name: s.name, track: s.track, gems: s.gems, bankTitle: bank.title, teacher: teacher?.name || "", progress };
+  return { token: s.token, pkey: await pkeyFor(s), name: s.name, track: s.track, gems: s.gems, bankTitle: bank.title, grade: bank.grade, teacher: teacher?.name || "", progress, locked: parseList(bank.locked) };
 }
 app.post("/api/play/join", async (req, res) => {
   if (limited("join:" + req.ip, 30, 60000)) return res.status(429).json({ error: "Too many tries. Wait a minute." });
@@ -293,9 +317,22 @@ app.post("/api/play/join", async (req, res) => {
   const bank = await get("SELECT * FROM banks WHERE code=?", code);
   if (!bank || !bank.shared) return res.status(404).json({ error: "That class code doesn't work. Check it with your teacher." });
   if (name.length < 2) return res.status(400).json({ error: "Type your name." });
-  let s = await get("SELECT * FROM students WHERE bank_id=? AND lower(name)=lower(?) AND track=?", bank.id, name, track);
+  // picture password: one secret picture per student name in this class (shared by their blocks and Python records)
+  const pic = PICS.includes(req.body.pic) ? req.body.pic : null;
+  const same = await all("SELECT * FROM students WHERE bank_id=? AND lower(name)=lower(?)", bank.id, name);
+  const known = same.find((r) => r.pic)?.pic;
+  if (known) {
+    if (!pic) return res.json({ needPic: "enter" });
+    const key = `pic:${bank.id}:${name.toLowerCase()}`;
+    if (limited(key, 8, 10 * 60000)) return res.status(429).json({ error: "Too many wrong pictures. Ask your teacher, or wait 10 minutes." });
+    if (pic !== known) return res.status(401).json({ error: "That is not your secret picture. Try again!", wrongPic: true });
+  } else {
+    if (!pic) return res.json({ needPic: "choose" });
+    if (same.length) await run("UPDATE students SET pic=? WHERE bank_id=? AND lower(name)=lower(?)", pic, bank.id, name);
+  }
+  let s = same.find((r) => r.track === track);
   if (!s) {
-    const r = await get("INSERT INTO students(bank_id,name,track,token) VALUES(?,?,?,?) RETURNING id", bank.id, name, track, newToken());
+    const r = await get("INSERT INTO students(bank_id,name,track,token,pic,pkey) VALUES(?,?,?,?,?,?) RETURNING id", bank.id, name, track, newToken(), known || pic, same.find((x) => x.pkey)?.pkey || null);
     s = await get("SELECT * FROM students WHERE id=?", r.id);
   }
   res.json(await playState(s));
@@ -327,7 +364,7 @@ app.post("/api/play/progress", async (req, res) => {
   const s = await student(req, res); if (!s) return;
   const levelId = String(req.body.levelId || "").slice(0, 20);
   const stars = Math.min(Math.max(Number(req.body.stars) || 1, 1), 3);
-  if (!/^[bp]\d+$/.test(levelId)) return res.status(400).json({ error: "Bad level." });
+  if (!LEVEL_ID.test(levelId)) return res.status(400).json({ error: "Bad level." });
   // 10 gems per new star (replaying a level only pays for stars beyond the best so far)
   const before = (await get("SELECT stars FROM progress WHERE student_id=? AND level_id=?", s.id, levelId))?.stars || 0;
   const earned = Math.max(0, stars - before) * 10;
@@ -340,10 +377,55 @@ app.post("/api/play/progress", async (req, res) => {
 app.post("/api/play/attempt", async (req, res) => {
   const s = await student(req, res); if (!s) return;
   const levelId = String(req.body.levelId || "").slice(0, 20);
-  if (!/^[bp]\d+$/.test(levelId)) return res.status(400).json({ error: "Bad level." });
-  await run(`INSERT INTO attempts(student_id,level_id,runs,fails) VALUES(?,?,1,?)
-     ON CONFLICT(student_id,level_id) DO UPDATE SET runs=attempts.runs+1, fails=attempts.fails+excluded.fails, at=NOW_TS`, s.id, levelId, req.body.ok ? 0 : 1);
+  if (!LEVEL_ID.test(levelId)) return res.status(400).json({ error: "Bad level." });
+  const code = typeof req.body.code === "string" ? req.body.code.slice(0, 8000) : null;
+  await run(`INSERT INTO attempts(student_id,level_id,runs,fails,code) VALUES(?,?,1,?,?)
+     ON CONFLICT(student_id,level_id) DO UPDATE SET runs=attempts.runs+1, fails=attempts.fails+excluded.fails, code=COALESCE(excluded.code, attempts.code), at=NOW_TS`, s.id, levelId, req.body.ok ? 0 : 1, code);
   res.json({ ok: true });
+});
+
+// ---------- My Projects (free-build sandbox) ----------
+const TILE = /^[.,~^TRO*F]{8}$/;
+function cleanWorld(w) {
+  const grid = Array.isArray(w?.grid) && w.grid.length === 8 && w.grid.every((r) => typeof r === "string" && TILE.test(r)) ? w.grid : null;
+  const st = Array.isArray(w?.start) ? w.start : [];
+  const start = [Math.min(Math.max(Number(st[0]) | 0, 0), 7), Math.min(Math.max(Number(st[1]) | 0, 0), 7), ["N", "E", "S", "W"].includes(st[2]) ? st[2] : "E"];
+  return grid && { grid, start };
+}
+const newShare = () => crypto.randomBytes(6).toString("base64url");
+app.get("/api/play/projects", async (req, res) => {
+  const s = await student(req, res); if (!s) return;
+  res.json(await all("SELECT id, title, share, track, updated FROM projects WHERE student_id=? ORDER BY updated DESC", s.id));
+});
+app.post("/api/play/projects", async (req, res) => {
+  const s = await student(req, res); if (!s) return;
+  const title = String(req.body.title || "").trim().slice(0, 60) || "My project";
+  const world = cleanWorld(req.body.world);
+  const code = String(req.body.code ?? "").slice(0, 20000);
+  if (!world) return res.status(400).json({ error: "That world can't be saved." });
+  const id = Number(req.body.id);
+  if (id) {
+    const mine = await get("SELECT id, share FROM projects WHERE id=? AND student_id=?", id, s.id);
+    if (!mine) return res.status(404).json({ error: "Project not found." });
+    await run("UPDATE projects SET title=?, world=?, code=?, updated=NOW_TS WHERE id=?", title, JSON.stringify(world), code, id);
+    return res.json({ id, share: mine.share, title });
+  }
+  const count = await get("SELECT COUNT(*) AS n FROM projects WHERE student_id=?", s.id);
+  if (count.n >= 30) return res.status(400).json({ error: "You have 30 projects. Delete one to make a new one." });
+  const r = await get("INSERT INTO projects(student_id,share,title,track,world,code) VALUES(?,?,?,?,?,?) RETURNING id, share", s.id, newShare(), title, s.track, JSON.stringify(world), code);
+  res.json({ id: r.id, share: r.share, title });
+});
+app.delete("/api/play/projects/:id", async (req, res) => {
+  const s = await student(req, res); if (!s) return;
+  await run("DELETE FROM projects WHERE id=? AND student_id=?", Number(req.params.id), s.id);
+  res.json({ ok: true });
+});
+// anyone with the share link can open a project (read-only)
+app.get("/api/projects/:share", async (req, res) => {
+  if (limited("proj:" + req.ip, 60, 60000)) return res.status(429).json({ error: "Too many tries. Wait a minute." });
+  const p = await get("SELECT p.title, p.track, p.world, p.code, p.updated, s.name FROM projects p JOIN students s ON s.id=p.student_id WHERE p.share=?", String(req.params.share));
+  if (!p) return res.status(404).json({ error: "Project not found." });
+  res.json({ title: p.title, track: p.track, world: JSON.parse(p.world), code: p.code, author: p.name.split(" ")[0], updated: p.updated });
 });
 
 // ---------- progress report for the student and their parent (read-only, opened with the progress code) ----------

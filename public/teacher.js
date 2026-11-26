@@ -42,7 +42,7 @@
   // ---------- banks ----------
   async function loadBanks() {
     banks = await api("GET", "/api/banks");
-    $("banks").innerHTML = banks.length ? banks.map((b) => `<button class="bank ${bank && bank.id === b.id ? "active" : ""}" data-id="${b.id}"><b>${esc(b.title)}</b><br><span class="muted">${esc(b.grade || "")} · ${b.question_count} questions · ${b.student_count} students</span></button>`).join("") : '<p class="muted">No banks yet.</p>';
+    $("banks").innerHTML = banks.length ? banks.map((b) => `<button class="bank ${bank && bank.id === b.id ? "active" : ""}" data-id="${b.id}"><b>${esc(b.title)}</b><br><span class="muted">${esc(b.grade || "")} · ${b.student_count} students</span></button>`).join("") : '<p class="muted">No classes yet.</p>';
     $("banks").querySelectorAll(".bank").forEach((el) => el.addEventListener("click", () => openBank(Number(el.dataset.id))));
   }
   $("newBank").addEventListener("submit", async (e) => {
@@ -50,14 +50,14 @@
     try { const b = await api("POST", "/api/banks", { title: $("btitle").value, grade: $("bgrade").value }); $("btitle").value = ""; await loadBanks(); openBank(b.id); }
     catch (err) { alert(err.message); }
   });
-  function openBank(id) { bank = banks.find((b) => b.id === id); tab = "questions"; editing = null; loadBanks(); render(); }
+  function openBank(id) { bank = banks.find((b) => b.id === id); tab = "report"; editing = null; loadBanks(); render(); }
 
   function render() {
-    if (!bank) { $("detail").innerHTML = '<p class="muted">Create a question bank on the left, or pick one to open it.</p>'; return; }
+    if (!bank) { $("detail").innerHTML = '<p class="muted">Create a class on the left, or pick one to open it.</p>'; return; }
     $("detail").innerHTML = `<div class="row" style="margin-bottom:14px"><h2 style="margin:0">${esc(bank.title)}</h2><span class="spacer"></span><span class="chip">Class code: ${esc(bank.code)}</span></div>
-      <div class="tabs">${[["questions", "Questions"], ["import", "Import"], ["share", "Share"], ["report", "Grade report"]].map(([k, n]) => `<button class="tab ${tab === k ? "active" : ""}" data-tab="${k}">${n}</button>`).join("")}</div><div id="pane"></div>`;
+      <div class="tabs">${[["report", "Grade report"], ["lessons", "Lessons & locks"], ["share", "Share"], ["questions", "Questions"], ["import", "Import"]].map(([k, n]) => `<button class="tab ${tab === k ? "active" : ""}" data-tab="${k}">${n}</button>`).join("")}</div><div id="pane"></div>`;
     $("detail").querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { tab = t.dataset.tab; editing = null; render(); }));
-    ({ questions: paneQuestions, import: paneImport, share: paneShare, report: paneReport })[tab]();
+    ({ questions: paneQuestions, import: paneImport, share: paneShare, report: paneReport, lessons: paneLessons })[tab]();
   }
 
   // ---------- questions ----------
@@ -212,13 +212,15 @@
   // ---------- share ----------
   function paneShare() {
     const link = `${location.origin}/play?code=${bank.code}`;
-    $("pane").innerHTML = `<p>Students open the play page and type this class code. No student accounts are needed — they only enter their name.</p>
+    const gc = `https://classroom.google.com/share?url=${encodeURIComponent(link)}&title=${encodeURIComponent("BlockQuest Academy · " + bank.title)}&body=${encodeURIComponent("Class code: " + bank.code)}`;
+    $("pane").innerHTML = `<p>Students open the play page and type this class code and their name. The first time, they choose a <b>secret picture</b> (no typing needed), and they tap the same picture every time they come back. If a student forgets it, reset it from their page in the Grade report.</p>
       <div class="code-big">${esc(bank.code)}</div>
       <div class="field" style="margin-top:14px"><label for="link">Direct link</label><div class="row" style="flex-wrap:nowrap"><input id="link" readonly value="${esc(link)}"><button id="copy" class="btn small">Copy</button></div></div>
       <div class="row"><a class="btn teal small" href="${esc(link)}" target="_blank" rel="noopener">Preview as a student</a>
+      <a class="btn small" href="${esc(gc)}" target="_blank" rel="noopener">Share to Google Classroom</a>
       <label style="margin:0"><input type="checkbox" id="shared" style="width:auto" ${bank.shared ? "checked" : ""}> Students can join with this code</label></div>
-      <hr style="border-color:var(--line);margin:22px 0"><div class="field"><label for="rename">Rename bank</label><div class="row" style="flex-wrap:nowrap"><input id="rename" value="${esc(bank.title)}" maxlength="120"><button id="saveName" class="btn ghost small">Save</button></div></div>
-      <button id="delBank" class="btn pink small">Delete this bank</button>`;
+      <hr style="border-color:var(--line);margin:22px 0"><div class="field"><label for="rename">Rename class</label><div class="row" style="flex-wrap:nowrap"><input id="rename" value="${esc(bank.title)}" maxlength="120"><button id="saveName" class="btn ghost small">Save</button></div></div>
+      <button id="delBank" class="btn pink small">Delete this class</button>`;
     $("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(link); } catch { $("link").select(); document.execCommand("copy"); } $("copy").textContent = "Copied!"; });
     const update = async (body) => { bank = await api("PUT", `/api/banks/${bank.id}`, body); await loadBanks(); };
     $("shared").addEventListener("change", (e) => update({ shared: e.target.checked }));
@@ -229,6 +231,7 @@
     });
   }
 
+  const PICS = { dog: "🐶", cat: "🐱", lion: "🦁", frog: "🐸", monkey: "🐵", panda: "🐼", fox: "🦊", turtle: "🐢", octopus: "🐙", unicorn: "🦄", bee: "🐝", dolphin: "🐬" };
   // ---------- report ----------
   function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -237,22 +240,75 @@
     const total = (t) => window.LEVELS[t].length;
     const trackName = (t) => (t === "python" ? "Python" : "Blocks");
     $("pane").innerHTML = `<div class="row" style="margin-bottom:12px"><span class="chip">${r.students.length} student entries</span><span class="spacer"></span><button id="refresh" class="btn ghost small">Refresh</button><button id="export" class="btn small">Export CSV</button></div>
-      <div class="tablewrap"><table><thead><tr><th>Student</th><th>Track</th><th>Levels</th><th>Stars</th><th>Answered</th><th>Correct</th><th>Quiz score</th><th>Last active</th><th>Parent code</th><th></th></tr></thead><tbody>
-      ${r.students.map((s) => `<tr><td><b>${esc(s.name)}</b></td><td>${trackName(s.track)}</td><td>${s.levels_done} / ${total(s.track)}</td><td>${s.stars} / ${total(s.track) * 3}</td><td>${s.answered}</td><td>${s.correct}</td>
-        <td><div class="row" style="flex-wrap:nowrap;gap:8px"><b>${s.answered ? pct(s.correct, s.answered) + "%" : "–"}</b><div class="bar"><b style="width:${pct(s.correct, s.answered)}%"></b></div></div></td><td class="muted">${esc(s.last_seen)}</td><td><a href="/progress#${esc(s.pkey || "")}" target="_blank" style="font-family:ui-monospace,monospace">${esc(s.pkey || "")}</a></td><td><button class="btn ghost small" data-rm="${s.id}" title="Remove this student's results">✕</button></td></tr>`).join("") || '<tr><td colspan="10" class="muted">No students have joined yet. Share the class code from the Share tab.</td></tr>'}
+      <div class="tablewrap"><table><thead><tr><th>Student</th><th title="Secret picture">🔑</th><th>Track</th><th>Levels</th><th>Stars</th><th>Gems</th><th>Last active</th><th>Parent code</th><th></th></tr></thead><tbody>
+      ${r.students.map((s) => `<tr><td><a href="#" data-st="${s.id}"><b>${esc(s.name)}</b></a></td><td style="font-size:20px">${PICS[s.pic] || "–"}</td><td>${trackName(s.track)}</td><td><div class="row" style="flex-wrap:nowrap;gap:8px"><b>${s.levels_done} / ${total(s.track)}</b><div class="bar"><b style="width:${pct(s.levels_done, total(s.track))}%"></b></div></div></td><td>${s.stars} / ${total(s.track) * 3}</td><td>💎 ${s.gems}</td><td class="muted">${esc(s.last_seen)}</td><td><a href="/progress#${esc(s.pkey || "")}" target="_blank" style="font-family:ui-monospace,monospace">${esc(s.pkey || "")}</a></td><td><button class="btn ghost small" data-rm="${s.id}" title="Remove this student's results">✕</button></td></tr>`).join("") || '<tr><td colspan="9" class="muted">No students have joined yet. Share the class code from the Share tab.</td></tr>'}
       </tbody></table></div>
-      <h3 style="margin-top:26px">How each question is doing</h3>
-      <div class="tablewrap"><table><thead><tr><th>#</th><th>Question</th><th>Answered</th><th>Correct</th><th>% correct</th></tr></thead><tbody>
-      ${r.questions.map((q, n) => `<tr><td>${n + 1}</td><td>${esc(q.text)}</td><td>${q.answered}</td><td>${q.correct}</td><td>${q.answered ? pct(q.correct, q.answered) + "%" : "–"}</td></tr>`).join("") || '<tr><td colspan="5" class="muted">No questions in this bank yet.</td></tr>'}
-      </tbody></table></div>`;
+      <p class="muted" style="margin-top:8px">Click a student's name to see each level, their latest code and their projects.</p>
+`;
     $("refresh").addEventListener("click", paneReport);
+    $("pane").querySelectorAll("[data-st]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); studentModal(Number(a.dataset.st)); }));
     $("export").addEventListener("click", () => {
       const cell = (v) => `"${String(v).replace(/"/g, '""')}"`;
-      const rows = [["Student", "Track", "Levels completed", "Levels total", "Stars", "Questions answered", "Correct", "Quiz score %", "Last active (UTC)", "Parent progress code"]]
-        .concat(r.students.map((s) => [s.name, trackName(s.track), s.levels_done, total(s.track), s.stars, s.answered, s.correct, s.answered ? pct(s.correct, s.answered) : "", s.last_seen, s.pkey || ""]));
+      const rows = [["Student", "Track", "Levels completed", "Levels total", "Stars", "Gems", "Last active (UTC)", "Parent progress code"]]
+        .concat(r.students.map((s) => [s.name, trackName(s.track), s.levels_done, total(s.track), s.stars, s.gems, s.last_seen, s.pkey || ""]));
       download(`${bank.title.replace(/[^\w\- ]+/g, "")} - grade report.csv`, rows.map((x) => x.map(cell).join(",")).join("\n"));
     });
     $("pane").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", async () => { if (!confirm("Remove this student's results from the report?")) return; await api("DELETE", `/api/students/${b.dataset.rm}`); paneReport(); }));
+  }
+
+  // ---------- one student: levels, latest code, projects ----------
+  const allLevelLists = () => [
+    ...window.STAGES.map((st) => ({ title: `Stage ${st.n} · Grades ${st.grades} (${st.track === "blocks" ? "Blocks" : "Python"})`, list: window.LEVELS[st.track].filter((l) => l.stage === st.n), track: st.track })),
+    { title: "AI Lab", list: window.AI_LEVELS.map((a) => ({ ...a, title: BQ.AI.title(a) })), track: "ai" },
+  ];
+  const levelNo = (l, track) => (track === "ai" ? "AI " + (window.AI_LEVELS.findIndex((a) => a.id === l.id) + 1) : window.LEVELS[track].indexOf(l) + 1);
+  async function studentModal(id) {
+    let d;
+    try { d = await api("GET", `/api/students/${id}`); } catch (e) { return alert(e.message); }
+    const groups = allLevelLists().filter((g) => g.track === d.track || g.track === "ai");
+    const box = document.createElement("div");
+    box.className = "modal";
+    box.innerHTML = `<div class="card" style="max-width:820px;width:100%;max-height:88vh;overflow:auto">
+      <div class="row"><h2 style="margin:0">${esc(d.name)} <span style="font-size:24px">${PICS[d.pic] || ""}</span></h2><span class="chip">${d.track === "python" ? "Python" : "Blocks"}</span><span class="chip">💎 ${d.gems}</span><span class="spacer"></span><button class="btn ghost small" data-x>Close</button></div>
+      <div class="row" style="margin:10px 0"><button class="btn ghost small" data-reset>Reset secret picture</button><a class="btn ghost small" href="/progress#${esc(d.pkey || "")}" target="_blank">Parent view</a><span id="msg" class="ok"></span></div>
+      ${groups.map((g) => `<h3 style="margin-top:16px">${esc(g.title)}</h3><div class="tablewrap"><table><thead><tr><th>#</th><th>Level</th><th>Stars</th><th>Runs</th><th>Failed runs</th><th>Latest code</th></tr></thead><tbody>
+        ${g.list.map((l) => { const p = d.levels[l.id]; return `<tr><td>${levelNo(l, g.track)}</td><td>${esc(l.title)}</td><td style="color:var(--yellow)">${p?.stars ? "★".repeat(p.stars) : "–"}</td><td>${p?.runs || "–"}</td><td>${p?.fails ? (p.fails >= 5 && !p.stars ? `<b class="error">${p.fails} ⚠️</b>` : p.fails) : "–"}</td>
+          <td>${p?.code ? `<details><summary>Show</summary><pre class="codebox">${esc(p.code)}</pre></details>` : '<span class="muted">–</span>'}</td></tr>`; }).join("")}</tbody></table></div>`).join("")}
+      <h3 style="margin-top:16px">Projects</h3>${d.projects.length ? `<ul>${d.projects.map((p) => `<li><a href="/play?project=${esc(p.share)}" target="_blank">${esc(p.title)}</a> <span class="muted">${esc((p.updated || "").slice(0, 10))}</span></li>`).join("")}</ul>` : '<p class="muted">No projects yet.</p>'}
+    </div>`;
+    document.body.appendChild(box);
+    const close = () => box.remove();
+    box.querySelector("[data-x]").addEventListener("click", close);
+    box.addEventListener("click", (e) => { if (e.target === box) close(); });
+    box.querySelector("[data-reset]").addEventListener("click", async () => {
+      if (!confirm(`Reset ${d.name}'s secret picture? They will choose a new one next time they join.`)) return;
+      await api("POST", `/api/students/${id}/reset-picture`); box.querySelector("#msg").textContent = "Done. They will choose a new picture next time.";
+    });
+  }
+
+  // ---------- lessons & level locks ----------
+  function paneLessons() {
+    const locked = new Set((() => { try { return JSON.parse(bank.locked || "[]"); } catch { return []; } })());
+    const save = async () => { bank = await api("PUT", `/api/banks/${bank.id}`, { locked: [...locked] }); await loadBanks(); };
+    const C = window.TEACH.concepts;
+    $("pane").innerHTML = `<p>Each level comes with a short lesson plan. Untick <b>Open</b> to keep a level closed until you are ready to teach it (students who already finished it can still replay it).</p>
+      <div class="row no-print" style="margin-bottom:10px"><button class="btn ghost small" id="printL">🖨 Print lesson plans</button></div>
+      ${allLevelLists().map((g, gi) => `<div class="card" style="margin-top:12px;background:var(--panel2)"><div class="row"><h3 style="margin:0">${esc(g.title)}</h3><span class="spacer"></span>
+        <button class="btn ghost small no-print" data-open="${gi}">Open all</button><button class="btn ghost small no-print" data-lock="${gi}">Lock all</button></div>
+        ${g.list.map((l) => { const c = C[window.TEACH.levels[l.id]] || {}; return `<details class="lesson"><summary><label class="no-print" style="display:inline;margin:0" onclick="event.stopPropagation()"><input type="checkbox" data-lv="${l.id}" style="width:auto" ${locked.has(l.id) ? "" : "checked"}> Open</label>
+          <b>${levelNo(l, g.track)}. ${esc(l.title)}</b> <span class="chip">${esc(c.name || "")}</span></summary>
+          <div class="lesson-body"><p><b>Big idea:</b> ${esc(c.idea || "")}</p>
+          ${l.story ? `<p><b>The level:</b> ${esc(l.story)}</p>` : ""}
+          <p><b>Vocabulary:</b> ${esc((c.vocab || []).join(", "))}</p>
+          <p><b>Warm-up (5 min):</b> ${esc(c.warmup || "")}</p>
+          <p><b>Unplugged activity:</b> ${esc(c.unplugged || "")}</p>
+          ${l.hint ? `<p><b>Tell a stuck student:</b> ${esc(l.hint)}</p>` : ""}
+          <p><b>Check for understanding:</b> ${esc(c.check || "")}</p></div></details>`; }).join("")}</div>`).join("")}`;
+    $("pane").querySelectorAll("[data-lv]").forEach((cb) => cb.addEventListener("change", async () => { cb.checked ? locked.delete(cb.dataset.lv) : locked.add(cb.dataset.lv); await save(); }));
+    const groups = allLevelLists();
+    $("pane").querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", async () => { groups[b.dataset.open].list.forEach((l) => locked.delete(l.id)); await save(); paneLessons(); }));
+    $("pane").querySelectorAll("[data-lock]").forEach((b) => b.addEventListener("click", async () => { groups[b.dataset.lock].list.forEach((l) => locked.add(l.id)); await save(); paneLessons(); }));
+    $("printL").addEventListener("click", () => { $("pane").querySelectorAll("details").forEach((d) => (d.open = true)); window.print(); });
   }
 
   // ---------- boot ----------

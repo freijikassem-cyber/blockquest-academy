@@ -100,6 +100,53 @@
       pCodeLabel: "رمز التقدّم", pNeedsHelp: "يحتاج مساعدة: محاولات كثيرة دون إنهاء", pTrackBlocks: "المستكشف (القطع)", pTrackPython: "المبرمج (بايثون)",
     },
   };
+  // ---- stages, picture passwords, certificates, AI Lab, My Projects
+  Object.assign(S.en, {
+    tBlocksTag: "BLOCKS · GRADES 1–6", tPyTag: "PYTHON · GRADES 7–9",
+    stage: "Stage {n} · Grades {g}", stageAI: "AI Lab · All grades", cert: "🎓 Certificate",
+    lockedByTeacher: "Your teacher will open this level soon.",
+    picChoose: "Choose your secret picture", picChooseSub: "Remember it! You will tap the same picture every time you join.",
+    picEnter: "Tap your secret picture", picBack: "← Back",
+    pic_dog: "dog", pic_cat: "cat", pic_lion: "lion", pic_frog: "frog", pic_monkey: "monkey", pic_panda: "panda",
+    pic_fox: "fox", pic_turtle: "turtle", pic_octopus: "octopus", pic_unicorn: "unicorn", pic_bee: "bee", pic_dolphin: "dolphin",
+    aiSub: "Teach Bolt to recognise things by showing it examples, just like real artificial intelligence.",
+    projTitle: "My Projects", projSub: "Build your own world, then program Bolt in it. Share the link with friends and family.",
+    projNew: "+ New project", projEmpty: "No projects yet. Make your first world!", projOpen: "Open", projDelete: "Delete",
+    projDeleteConfirm: "Delete this project? This can't be undone.", projName: "Project name", projDefault: "My world",
+    projSave: "💾 Save", projSaved: "Saved!", projShare: "🔗 Share link", projCopied: "Link copied! Anyone with the link can watch your project.",
+    projPaint: "Build your world", projBolt: "Bolt", projBoltTip: "Tap a square to put Bolt there. Tap Bolt again to turn him.",
+    projIntro: "Pick a tile, then tap the map to build your world. Program Bolt and press Run!",
+    projFinished: "Program finished! 🎉", projView: "A project by {a}. Press Run to watch it!", projNotFound: "This project link doesn't work.",
+    projSaveFirst: "Save your project first.", projBack: "← My Projects",
+    t_grass: "grass", t_sand: "sand", t_water: "water", t_lava: "lava", t_tree: "tree", t_rock: "rock", t_ore: "crystal ore", t_gem: "gem", t_flag: "flag",
+    certTitle: "Certificate of Achievement", certThis: "This certificate is proudly given to", certDid: "for completing {stage} of BlockQuest Academy",
+    certStars: "with {n} of {m} stars", certClass: "Class", certTeacher: "Teacher", certDate: "Date", certPrint: "🖨 Print or save as PDF",
+    certNotYet: "This stage is not finished yet. Keep going!", certBack: "← Back",
+    pTrackAI: "AI Lab", pStage: "Stage {n} · Grades {g}",
+  });
+  Object.assign(S.ar, {
+    tBlocksTag: "القطع · الصفوف ١–٦", tPyTag: "بايثون · الصفوف ٧–٩",
+    stage: "المرحلة {n} · الصفوف {g}", stageAI: "مختبر الذكاء الاصطناعي · لكل الصفوف", cert: "🎓 الشهادة",
+    lockedByTeacher: "سيفتح معلمك هذا المستوى قريباً.",
+    picChoose: "اختر صورتك السرية", picChooseSub: "تذكّرها! ستضغط على الصورة نفسها في كل مرة تدخل فيها.",
+    picEnter: "اضغط على صورتك السرية", picBack: "→ رجوع",
+    pic_dog: "كلب", pic_cat: "قطة", pic_lion: "أسد", pic_frog: "ضفدع", pic_monkey: "قرد", pic_panda: "باندا",
+    pic_fox: "ثعلب", pic_turtle: "سلحفاة", pic_octopus: "أخطبوط", pic_unicorn: "حصان وحيد القرن", pic_bee: "نحلة", pic_dolphin: "دلفين",
+    aiSub: "علِّم بولت أن يتعرف على الأشياء بعرض أمثلة عليه، تماماً مثل الذكاء الاصطناعي الحقيقي.",
+    projTitle: "مشاريعي", projSub: "ابنِ عالمك الخاص، ثم برمج بولت فيه. شارك الرابط مع أصدقائك وعائلتك.",
+    projNew: "+ مشروع جديد", projEmpty: "لا توجد مشاريع بعد. اصنع عالمك الأول!", projOpen: "فتح", projDelete: "حذف",
+    projDeleteConfirm: "هل تريد حذف هذا المشروع؟ لا يمكن التراجع.", projName: "اسم المشروع", projDefault: "عالمي",
+    projSave: "💾 حفظ", projSaved: "تم الحفظ!", projShare: "🔗 رابط المشاركة", projCopied: "تم نسخ الرابط! يستطيع أي شخص معه الرابط مشاهدة مشروعك.",
+    projPaint: "ابنِ عالمك", projBolt: "بولت", projBoltTip: "اضغط على مربع لتضع بولت فيه. اضغط على بولت مرة أخرى لتديره.",
+    projIntro: "اختر قطعة أرض، ثم اضغط على الخريطة لتبني عالمك. برمج بولت واضغط تشغيل!",
+    projFinished: "انتهى البرنامج! 🎉", projView: "مشروع من صنع {a}. اضغط تشغيل لتشاهده!", projNotFound: "رابط المشروع هذا لا يعمل.",
+    projSaveFirst: "احفظ مشروعك أولاً.", projBack: "→ مشاريعي",
+    t_grass: "عشب", t_sand: "رمل", t_water: "ماء", t_lava: "حمم", t_tree: "شجرة", t_rock: "صخرة", t_ore: "خام بلّور", t_gem: "جوهرة", t_flag: "علم",
+    certTitle: "شهادة إنجاز", certThis: "تُمنح هذه الشهادة بكل فخر إلى", certDid: "لإتمام {stage} في أكاديمية بلوك كويست",
+    certStars: "بـ {n} من {m} نجمة", certClass: "الصف", certTeacher: "المعلم", certDate: "التاريخ", certPrint: "🖨 طباعة أو حفظ PDF",
+    certNotYet: "هذه المرحلة لم تكتمل بعد. واصل التقدّم!", certBack: "→ رجوع",
+    pTrackAI: "مختبر الذكاء الاصطناعي", pStage: "المرحلة {n} · الصفوف {g}",
+  });
   const get = () => { try { return localStorage.getItem("bq_lang") === "ar" ? "ar" : "en"; } catch { return "en"; } };
   let lang = get();
   const listeners = [];
