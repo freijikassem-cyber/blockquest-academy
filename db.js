@@ -75,6 +75,10 @@ async function sqlite(dir) {
   return db;
 }
 
-export async function openDb({ url, dir }) {
+export async function openDb({ url, dir, password }) {
+  // Supabase shows the connection string with a [YOUR-PASSWORD] placeholder. If DB_PASSWORD is set, it is put
+  // in there already encoded, so a password with symbols can be pasted as-is.
+  if (url && password) url = url.replace(/\[YOUR-PASSWORD\]/g, encodeURIComponent(password));
+  if (url && url.includes("[YOUR-PASSWORD]")) throw new Error("DATABASE_URL still contains [YOUR-PASSWORD]: set DB_PASSWORD too.");
   return url ? postgres(url) : sqlite(dir);
 }

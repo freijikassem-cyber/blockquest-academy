@@ -7,7 +7,7 @@ import { openDb } from "./db.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4173;
-const db = await openDb({ url: process.env.DATABASE_URL, dir: process.env.DATA_DIR || path.join(here, "data") });
+const db = await openDb({ url: process.env.DATABASE_URL, password: process.env.DB_PASSWORD, dir: process.env.DATA_DIR || path.join(here, "data") });
 console.log("database:", db.kind);
 const get = db.get, all = db.all, run = db.run;
 
